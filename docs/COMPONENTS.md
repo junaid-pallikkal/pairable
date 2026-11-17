@@ -1,4 +1,4 @@
-# SOLVIA — Component Architecture
+# RePair — Component Architecture
 
 Goal: one component per concept, no duplicates, consistent styling. Before creating a component, search this list. New shared components must be added here in the same change.
 

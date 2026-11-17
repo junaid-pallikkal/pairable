@@ -6,13 +6,10 @@ import {
   Home,
   LogOut,
   MessageSquare,
-  Monitor,
-  Moon,
   Package,
   Search,
   Settings,
   Shield,
-  Sun,
   Users,
   type LucideIcon,
 } from 'lucide-react'
@@ -20,50 +17,16 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { ButtonLink, IconButton, PageSpinner } from './ui'
 import { Assistant } from './Assistant'
+import { BotHead } from './Mascot'
 
 /* ---------- Logo & theme ---------- */
 
 export function Logo() {
   return (
-    <Link to="/" className="flex items-center gap-2 text-lg font-bold tracking-tight" aria-label="SOLVIA home">
-      <img src="/favicon.svg" alt="" width={28} height={28} />
-      SOLVIA
+    <Link to="/" className="flex items-center gap-2 text-lg font-bold tracking-tight" aria-label="RePair home">
+      <BotHead size={30} />
+      RePair
     </Link>
-  )
-}
-
-type Theme = 'system' | 'light' | 'dark'
-function applyTheme(t: Theme) {
-  const dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-  document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-}
-
-export function ThemeToggle({ className = "" }: { className?: string }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    try {
-      return (localStorage.getItem('solvia_theme') as Theme) || 'system'
-    } catch {
-      return 'system'
-    }
-  })
-  const next: Record<Theme, Theme> = { system: 'light', light: 'dark', dark: 'system' }
-  const icon: Record<Theme, LucideIcon> = { system: Monitor, light: Sun, dark: Moon }
-  return (
-    <IconButton
-      icon={icon[theme]}
-      label={`Theme: ${theme}`}
-      className={className}
-      onClick={() => {
-        const t = next[theme]
-        setTheme(t)
-        try {
-          localStorage.setItem('solvia_theme', t)
-        } catch {
-          /* ignore */
-        }
-        applyTheme(t)
-      }}
-    />
   )
 }
 
@@ -84,7 +47,6 @@ export function PublicLayout() {
             <NavLink to="/how-it-works" className="hover:text-primary">How it works</NavLink>
           </nav>
           <div className="flex items-center gap-1">
-            <ThemeToggle />
             {session ? (
               <ButtonLink to="/app">Open app</ButtonLink>
             ) : (
@@ -101,7 +63,7 @@ export function PublicLayout() {
       </main>
       <footer className="border-t border-line py-8 text-sm text-muted">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4">
-          <span>© SOLVIA</span>
+          <span>© RePair</span>
           <nav className="flex gap-5" aria-label="Footer">
             <Link to="/about" className="hover:text-fg">About</Link>
             <Link to="/privacy" className="hover:text-fg">Privacy</Link>
@@ -241,7 +203,6 @@ export function AppLayout() {
           ))}
         </nav>
         <div className="mt-auto flex items-center gap-2 px-8">
-          <ThemeToggle className={circle} />
           {bell}
           {out}
         </div>
@@ -251,8 +212,7 @@ export function AppLayout() {
         <header className="flex h-16 items-center justify-between px-5 md:hidden">
           <Logo />
           <div className="flex items-center gap-2">
-            <ThemeToggle className={circle} />
-            {bell}
+              {bell}
             {out}
           </div>
         </header>

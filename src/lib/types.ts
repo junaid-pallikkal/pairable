@@ -188,4 +188,5 @@ export interface PersonLite {
   city: string | null
   availability_status: Availability
   verification?: string
+  is_demo?: boolean
 }

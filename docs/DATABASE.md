@@ -1,4 +1,4 @@
-# SOLVIA — Database
+# RePair — Database
 
 PostgreSQL (Supabase). All tables in `public` unless noted. RLS **enabled on every table** (policies in PERMISSIONS.md). Naming: snake_case, plural tables, `uuid` PKs via `gen_random_uuid()`, `timestamptz` timestamps, `created_at`/`updated_at` everywhere.
 

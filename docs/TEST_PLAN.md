@@ -1,4 +1,4 @@
-# SOLVIA — Test Plan
+# RePair — Test Plan
 
 Principle: test the risky things first — permissions, state machines, matching correctness, and the end-to-end journey. Nothing is "complete" until its tests pass.
 

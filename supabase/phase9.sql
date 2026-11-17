@@ -1,4 +1,4 @@
--- SOLVIA phase 9. Run ONCE in the Supabase SQL editor, after schema.sql.
+-- RePair phase 9. Run ONCE in the Supabase SQL editor, after schema.sql.
 -- Adds: resources, blocking, reporting, verification, admin tools, suspended-account lockout.
 -- Safe to run twice.
 

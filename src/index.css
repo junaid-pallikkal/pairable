@@ -2,8 +2,7 @@
 
 /* White surfaces, black actions, ONE yellow accent. No red, blue or green:
    state is shown by icon, label and black / outlined / grey chips. */
-:root,
-:root[data-theme="light"] {
+:root {
   --bg: #ffffff;
   --surface: #ffffff;
   --surface-2: #f4f4f3;
@@ -18,23 +17,6 @@
   --warning: #5c5c58;
   --danger: #0d0d0d;
   color-scheme: light;
-}
-
-:root[data-theme="dark"] {
-  --bg: #111111;
-  --surface: #1a1a19;
-  --surface-2: #262625;
-  --line: #333331;
-  --fg: #f5f5f2;
-  --muted: #a3a39d;
-  --primary: #f5f5f2;
-  --primary-fg: #111111;
-  --accent: #fbbc15;
-  --accent-soft: #3a3115;
-  --success: #f5f5f2;
-  --warning: #c9c9c2;
-  --danger: #f5f5f2;
-  color-scheme: dark;
 }
 
 @theme inline {
@@ -101,3 +83,24 @@ body {
   from { opacity: 0; transform: translateY(8px) scale(0.96); }
   to { opacity: 1; transform: none; }
 }
+
+/* ---- RePair bot (Mascot.tsx) ---- */
+@keyframes bot-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+@keyframes bot-wave { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(20deg); } }
+@keyframes bot-hand { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(10deg); } }
+@keyframes bot-blink { 0%, 90%, 100% { transform: scaleY(1); } 94% { transform: scaleY(0.08); } }
+@keyframes bot-glow { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@keyframes bot-shadow { 0%, 100% { transform: scale(1); opacity: 0.22; } 50% { transform: scale(0.82); opacity: 0.12; } }
+@keyframes drift { 0%, 100% { transform: translate(0, 0) rotate(0); } 50% { transform: translate(10px, -14px) rotate(6deg); } }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes wiggle { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+
+.bot-float { animation: bot-float 3.4s ease-in-out infinite; }
+.bot-wave { animation: bot-wave 1.05s ease-in-out infinite; }
+.bot-hand { animation: bot-hand 0.55s ease-in-out infinite; }
+.bot-blink { animation: bot-blink 4.2s ease-in-out infinite; }
+.bot-glow { animation: bot-glow 2.2s ease-in-out infinite; }
+.bot-shadow { animation: bot-shadow 3.4s ease-in-out infinite; transform-origin: 160px 372px; }
+.drift { animation: drift 9s ease-in-out infinite; }
+.marquee-track { animation: marquee 40s linear infinite; width: max-content; }
+.marquee:hover .marquee-track { animation-play-state: paused; }

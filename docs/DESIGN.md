@@ -1,4 +1,4 @@
-# SOLVIA — Design System
+# RePair — Design System
 
 **Direction:** editorial minimalism, human-centred, calm, trustworthy. Usability always beats decoration. Avoid: generic AI gradients, oversized pill buttons, fake metrics/dashboards, nested cards, particle confetti.
 
@@ -63,8 +63,8 @@ Light / Dark / System. Implement by `data-theme` on `<html>` + CSS variables map
 
 ### Home
 1. **Header**
-2. **Hero** — H: "Problems meet solutions." Sub: "Describe what you need. SOLVIA helps you discover the right people, skills, and resources to move forward." Large composer (textarea, mic button, "Add details" disclosure), primary **Find My Solver**, secondary **I Can Help** (text-button style). Right/below: subtle static preview of the matching graph (not animated until interaction).
-3. How SOLVIA Works — 4 steps (Describe, Understand, Match, Resolve) with simple line icons.
+2. **Hero** — H: "Problems meet solutions." Sub: "Describe what you need. RePair helps you discover the right people, skills, and resources to move forward." Large composer (textarea, mic button, "Add details" disclosure), primary **Find My Solver**, secondary **I Can Help** (text-button style). Right/below: subtle static preview of the matching graph (not animated until interaction).
+3. How RePair Works — 4 steps (Describe, Understand, Match, Resolve) with simple line icons.
 4. Explore Possible Connections — interactive graph demo using *clearly labelled illustrative* sample, not live data.
 5. What You Can Solve — category grid (from DB categories).
 6. For People Who Need Help / For People Who Can Help — two-column editorial blocks.

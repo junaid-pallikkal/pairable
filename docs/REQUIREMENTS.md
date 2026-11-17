@@ -1,10 +1,10 @@
-# SOLVIA — Requirements
+# RePair — Requirements
 
 **Tagline:** Problems Meet Solutions · **Market:** India · **Language:** English only
 **Philosophy:** Simple outside. Intelligent inside. Human at its center.
 **Journey:** Describe → Understand → Discover → Match → Connect → Collaborate → Resolve
 
-Source: `SOLVIA_MASTER_WEBSITE_PLAN.md`. This document resolves ambiguities in that plan (see §9) and fixes MVP boundaries.
+Source: `RePair_MASTER_WEBSITE_PLAN.md`. This document resolves ambiguities in that plan (see §9) and fixes MVP boundaries.
 
 ---
 

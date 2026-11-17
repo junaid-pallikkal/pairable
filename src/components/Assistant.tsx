@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { Send, Sparkles, X } from 'lucide-react'
+import { Send, X } from 'lucide-react'
+import { BotHead } from './Mascot'
 import { useAuth } from '../lib/auth'
 import { AiLimit, AiUnavailable, askAssistant, type ChatMsg } from '../lib/ai'
 import { MicButton } from './MicButton'
@@ -21,6 +22,16 @@ export function Assistant() {
   const inputRef = useRef<HTMLInputElement>(null)
   const endRef = useRef<HTMLDivElement>(null)
   const launcher = useRef<HTMLButtonElement>(null)
+
+  // Other parts of the page can ask the assistant to open (the hero bot does)
+  useEffect(() => {
+    const open = () => {
+      setBubble(false)
+      setOpen(true)
+    }
+    window.addEventListener('repair:open-assistant', open)
+    return () => window.removeEventListener('repair:open-assistant', open)
+  }, [])
 
   // Friendly nudge once per browser session
   useEffect(() => {
@@ -108,15 +119,15 @@ export function Assistant() {
     <div className="fixed bottom-24 right-4 z-40 md:bottom-6 md:right-6">
       {open && (
         <section
-          aria-label="SOLVIA assistant"
+          aria-label="Pip, the RePair assistant"
           className="absolute bottom-16 right-0 flex max-h-[70vh] w-[min(22rem,calc(100vw-2rem))] animate-[pop-in_0.18s_ease-out] flex-col overflow-hidden rounded-3xl bg-surface shadow-float"
         >
           <header className="flex items-center gap-3 bg-fg p-4 text-bg">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-black">
-              <Sparkles size={18} aria-hidden />
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white">
+              <BotHead size={30} />
             </span>
             <div className="flex-1">
-              <p className="text-sm font-bold">SOLVIA assistant</p>
+              <p className="text-sm font-bold">Pip, your RePair helper</p>
               <p className="text-xs opacity-70">Ask how things work</p>
             </div>
             <button aria-label="Close assistant" onClick={close} className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-white/10">
@@ -195,9 +206,9 @@ export function Assistant() {
         aria-label={open ? 'Close assistant' : 'Open assistant'}
         aria-expanded={open}
         onClick={() => (open ? close() : openPanel())}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-fg text-accent shadow-float transition-transform hover:scale-105"
+        className="flex h-16 w-16 items-center justify-center rounded-full bg-fg shadow-float transition-transform hover:scale-105"
       >
-        {open ? <X size={22} aria-hidden /> : <Sparkles size={24} aria-hidden />}
+        {open ? <X size={22} className="text-bg" aria-hidden /> : <BotHead size={44} />}
       </button>
     </div>
   )

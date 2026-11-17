@@ -7,7 +7,7 @@ export async function fetchPeople(ids: string[]): Promise<Map<string, PersonLite
   const map = new Map<string, PersonLite>()
   if (!uniq.length) return map
   const rows = unwrap(
-    await supabase.from('profiles').select('id,display_name,headline,city,availability_status,verification').in('id', uniq),
+    await supabase.from('profiles').select('*').in('id', uniq),
   ) as PersonLite[]
   rows.forEach((r) => map.set(r.id, r))
   return map

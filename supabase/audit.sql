@@ -29,3 +29,32 @@ where n.nspname = 'public' and c.relkind = 'v';
 
 -- 6. Admin accounts (review this list)
 select id, display_name from public.profiles where is_admin;
+
+-- ============================================================
+-- ALL CHECKS IN ONE RESULT (the SQL editor only shows the last statement, so use this one)
+-- ============================================================
+select 'tables without RLS (must be none)' as check, c.relname::text as item
+from pg_class c join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity
+union all
+select 'RLS on but no policy (only ai_calls and audit_log are ok)', c.relname::text
+from pg_class c join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity
+  and not exists (select 1 from pg_policies p where p.schemaname = 'public' and p.tablename = c.relname)
+union all
+select 'definer function without fixed search_path (must be none)', p.proname::text
+from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public' and p.prosecdef
+  and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) x where x like 'search_path=%')
+union all
+select 'write policy open to anon/public (must be none)', tablename || '.' || policyname
+from pg_policies
+where schemaname = 'public' and cmd in ('INSERT','UPDATE','DELETE','ALL')
+  and (roles @> '{anon}' or roles @> '{public}')
+union all
+select 'views (only public_cases expected)', c.relname::text
+from pg_class c join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = 'public' and c.relkind = 'v'
+union all
+select 'admin accounts (review)', display_name from public.profiles where is_admin
+order by 1, 2;

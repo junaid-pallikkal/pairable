@@ -1,4 +1,4 @@
-# SOLVIA — Project Plan
+# RePair — Project Plan
 
 Phases follow the master plan, with explicit deliverables, exit criteria and dependencies. Sequence is strict unless noted. Each phase ends with: tests passing (TEST_PLAN), docs updated, no known critical bugs.
 

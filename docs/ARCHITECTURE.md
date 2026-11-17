@@ -1,4 +1,4 @@
-# SOLVIA — Architecture
+# RePair — Architecture
 
 Principle: simplest thing that works. SPA + Supabase. No custom server beyond Edge Functions.
 

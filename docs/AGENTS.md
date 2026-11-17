@@ -1,4 +1,4 @@
-# SOLVIA — Agent Guidelines (for Claude / AI coding agents)
+# RePair — Agent Guidelines (for Claude / AI coding agents)
 
 Read this file, `REQUIREMENTS.md`, `ARCHITECTURE.md`, `DATABASE.md`, `PERMISSIONS.md` and `DESIGN.md` before changing code. If something here conflicts with a user instruction in chat, the user wins — but flag the conflict and propose a doc update.
 

@@ -1,4 +1,4 @@
--- SOLVIA schema. Run ONCE in the Supabase SQL editor (Dashboard > SQL Editor > New query).
+-- RePair schema. Run ONCE in the Supabase SQL editor (Dashboard > SQL Editor > New query).
 -- Covers phases 3-7: profiles, skills, cases, matching, connections, messages,
 -- notifications, milestones, tasks, progress, resolution, feedback.
 -- Row Level Security is enabled on every table.

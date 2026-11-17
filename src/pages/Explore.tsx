@@ -92,7 +92,7 @@ export default function Explore() {
         <ul className="grid gap-4 md:grid-cols-2">
           {list.map((c) => (
             <li key={c.id}>
-              <Card className="flex h-full flex-col gap-3">
+              <Card className="flex h-full flex-col gap-3 transition duration-200 hover:-translate-y-1 hover:shadow-float">
                 <div className="flex items-start justify-between gap-2">
                   <h2 className="font-semibold">{c.title}</h2>
                   {c.urgency && <Chip tone={c.urgency === 'urgent' ? 'danger' : 'neutral'}>{urgencyLabel[c.urgency]}</Chip>}

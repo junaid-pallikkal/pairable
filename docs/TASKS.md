@@ -35,3 +35,11 @@ Tick a box only when done and checked.
 - [ ] Vitest and Playwright (needs your OK to add packages)
 - [ ] Real phone and screen reader pass
 - [ ] Production project, email sender, domain, backups
+
+## Rename, new look, login, bot, demos
+
+- [x] Renamed to RePair; dark mode removed
+- [x] Waving bot hero, creative home page, dashboard banner, card hover lift (checked in browser)
+- [x] New sign-in and sign-up pages, forgot password and reset password (login, validation, eye toggle checked; reset email not sent yet)
+- [x] `supabase/demo.sql` applied: 6 people, 6 problems, 6 resources confirmed in the database; demo person ranks first in a matching test
+- [ ] Add `/reset-password` to Supabase Auth redirect URLs, then try Forgot password end to end (you)

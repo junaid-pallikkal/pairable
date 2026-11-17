@@ -47,6 +47,7 @@ export function SolverCard({
             <h3 className="font-semibold">{person.display_name}</h3>
             <span className="text-xs text-muted">#{match.rank}</span>
             <VerificationBadge level={person.verification} />
+            {person.is_demo && <Chip tone="neutral">Demo</Chip>}
           </div>
           {person.headline && <p className="text-sm text-muted">{person.headline}</p>}
         </div>

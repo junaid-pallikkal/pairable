@@ -12,12 +12,12 @@ function Doc({ title, children }: { title: string; children: ReactNode }) {
 
 export function HowItWorks() {
   return (
-    <Doc title="How SOLVIA works">
+    <Doc title="How RePair works">
       <h2>1. Describe</h2>
       <p>Write your problem in plain words. Add the skills it needs, where you are, and how urgent it is.</p>
       <h2>2. Match</h2>
       <p>
-        SOLVIA compares your needs with people’s listed skills, experience and availability. Each match shows the
+        RePair compares your needs with people’s listed skills, experience and availability. Each match shows the
         reason. Anything a person has not shared is shown as “not provided”.
       </p>
       <h2>3. Connect</h2>
@@ -31,9 +31,9 @@ export function HowItWorks() {
 
 export function About() {
   return (
-    <Doc title="About SOLVIA">
+    <Doc title="About RePair">
       <p>
-        SOLVIA connects people who face a problem with people, skills and resources that can solve it. It is built for
+        RePair connects people who face a problem with people, skills and resources that can solve it. It is built for
         India and works in English.
       </p>
       <p>Simple outside. Intelligent inside. Human at its center.</p>
@@ -70,8 +70,8 @@ export function Terms() {
         <li>You must be 18 or older.</li>
         <li>Share only information you are allowed to share. Be honest about your skills.</li>
         <li>Be respectful. Spam and abuse can lead to removal.</li>
-        <li>Any budget shown is informational. SOLVIA does not process payments or guarantee outcomes.</li>
-        <li>SOLVIA does not give medical, legal or financial advice. Experts on the platform act independently.</li>
+        <li>Any budget shown is informational. RePair does not process payments or guarantee outcomes.</li>
+        <li>RePair does not give medical, legal or financial advice. Experts on the platform act independently.</li>
       </ul>
     </Doc>
   )

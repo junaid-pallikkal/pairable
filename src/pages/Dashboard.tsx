@@ -7,7 +7,8 @@ import { errorMessage, unwrap, useData } from '../lib/data'
 import { fetchConnections, recipientOf } from '../lib/queries'
 import { timeAgo } from '../lib/format'
 import type { Case } from '../lib/types'
-import { ButtonLink, Card, EmptyState, ErrorState, IconButton, ListSkeleton, PageHeader, Tabs } from '../components/ui'
+import { ButtonLink, Card, EmptyState, ErrorState, IconButton, ListSkeleton, Tabs } from '../components/ui'
+import { Mascot } from '../components/Mascot'
 import { CaseStatusChip } from '../components/StatusChip'
 import { ConfirmDialog } from '../components/Modal'
 import { useToast } from '../components/Toast'
@@ -45,12 +46,24 @@ export function Dashboard() {
 
   return (
     <div>
-      <PageHeader
-        title={`Hi, ${profile.display_name.split(' ')[0]}`}
-        actions={
-          <ButtonLink to="/app/new"><Plus size={16} aria-hidden /> New problem</ButtonLink>
-        }
-      />
+      <div className="relative mb-8 overflow-hidden rounded-[2rem] bg-fg p-7 text-bg md:p-9">
+        <div className="absolute -left-10 -top-12 h-48 w-48 rounded-full bg-accent/30 blur-3xl" aria-hidden />
+        <div className="absolute -bottom-16 right-24 h-48 w-48 rounded-full bg-accent/20 blur-3xl" aria-hidden />
+        <div className="relative max-w-md">
+          <p className="text-sm text-white/70">Hello,</p>
+          <h1 className="text-4xl font-bold tracking-tight">{profile.display_name.split(' ')[0]}</h1>
+          <p className="mt-2 text-sm text-white/70">
+            {cases.data
+              ? `${cases.data.filter((c) => ['open', 'in_progress', 'resolution_proposed'].includes(c.status)).length} active problems`
+              : ' '}
+            {conns.data ? ` · ${incoming.length} new ${incoming.length === 1 ? 'request' : 'requests'}` : ''}
+          </p>
+          <ButtonLink to="/app/new" className="mt-6 !bg-accent !text-black">
+            <Plus size={16} aria-hidden /> New problem
+          </ButtonLink>
+        </div>
+        <Mascot className="pointer-events-none absolute -bottom-8 right-4 hidden h-56 w-auto sm:block" />
+      </div>
       {showTabs && (
         <Tabs
           tabs={[
@@ -73,7 +86,7 @@ export function Dashboard() {
           <ul className="space-y-3">
             {cases.data!.map((c) => (
               <li key={c.id}>
-                <Card className="flex items-center justify-between gap-3">
+                <Card className="flex items-center justify-between gap-3 transition duration-200 hover:-translate-y-0.5 hover:shadow-float">
                   <Link to={`/app/cases/${c.id}`} className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{c.title}</p>
                     <p className="text-xs text-muted">{timeAgo(c.created_at)}</p>
@@ -99,7 +112,7 @@ export function Dashboard() {
               <ul className="space-y-3">
                 {incoming.map((c) => (
                   <li key={c.id}>
-                    <Card className="flex items-center justify-between gap-3">
+                    <Card className="flex items-center justify-between gap-3 transition duration-200 hover:-translate-y-0.5 hover:shadow-float">
                       <div className="min-w-0">
                         <p className="truncate font-semibold">{c.case?.title}</p>
                         <p className="text-xs text-muted">From {c.other?.display_name ?? 'someone'}</p>
@@ -119,7 +132,7 @@ export function Dashboard() {
               <ul className="space-y-3">
                 {active.map((c) => (
                   <li key={c.id}>
-                    <Card className="flex items-center justify-between gap-3">
+                    <Card className="flex items-center justify-between gap-3 transition duration-200 hover:-translate-y-0.5 hover:shadow-float">
                       <div className="min-w-0">
                         <p className="truncate font-semibold">{c.case?.title}</p>
                         <p className="text-xs text-muted">With {c.other?.display_name ?? 'someone'}</p>

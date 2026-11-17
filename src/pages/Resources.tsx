@@ -24,7 +24,7 @@ export interface ResourceRow {
   status: 'available' | 'reserved' | 'unavailable'
   hidden_by_admin: boolean
   created_at: string
-  owner: { display_name: string } | null
+  owner: { display_name: string; is_demo?: boolean } | null
 }
 
 const KIND = { physical: 'Equipment', digital: 'Digital', space: 'Space' } as const
@@ -196,7 +196,7 @@ export default function Resources() {
       unwrap(
         await supabase
           .from('resources')
-          .select('*, owner:profiles!owner_id(display_name)')
+          .select('*, owner:profiles!owner_id(*)')
           .order('created_at', { ascending: false })
           .limit(200),
       ) as ResourceRow[],
@@ -276,7 +276,7 @@ export default function Resources() {
             const mine = r.owner_id === uid
             return (
               <li key={r.id}>
-                <Card className="flex h-full flex-col gap-3">
+                <Card className="flex h-full flex-col gap-3 transition duration-200 hover:-translate-y-1 hover:shadow-float">
                   <div className="flex items-start justify-between gap-2">
                     <h2 className="font-semibold">{r.title}</h2>
                     <Chip tone="neutral" icon={Package}>{KIND[r.kind]}</Chip>
@@ -285,6 +285,7 @@ export default function Resources() {
                   <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
                     <span className="inline-flex items-center gap-1"><MapPin size={12} aria-hidden /> {placeText(r.city, r.state, false)}</span>
                     {!mine && <span>{r.owner?.display_name}</span>}
+                    {!mine && r.owner?.is_demo && <Chip tone="neutral">Demo</Chip>}
                     <span>{timeAgo(r.created_at)}</span>
                     {mine && r.hidden_by_admin && <Chip tone="danger">Hidden by admin</Chip>}
                   </div>

@@ -1,4 +1,4 @@
-# SOLVIA — Permissions & Row Level Security
+# RePair — Permissions & Row Level Security
 
 **Default: deny.** Every table has RLS enabled and no policy = no access. The client never uses the service-role key. Admin power comes from `is_admin()` (checks `profiles.is_admin` + active), evaluated in the database.
 

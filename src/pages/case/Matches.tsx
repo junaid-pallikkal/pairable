@@ -29,7 +29,7 @@ async function loadMatches(caseId: string): Promise<Loaded> {
   const skills = new Map<string, SolverSkill[]>()
   if (ids.length) {
     const profs = unwrap(
-      await supabase.from('profiles').select('id,display_name,headline,city,availability_status,verification').in('id', ids),
+      await supabase.from('profiles').select('*').in('id', ids),
     ) as PersonLite[]
     profs.forEach((p) => people.set(p.id, p))
     const us = unwrap(

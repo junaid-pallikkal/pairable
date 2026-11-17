@@ -6,7 +6,7 @@ import { AppLayout, PublicLayout, RequireAuth } from './components/Layouts'
 import { PageSpinner } from './components/ui'
 import Home from './pages/Home'
 import { About, HowItWorks, Privacy, Terms } from './pages/Static'
-import { SignIn, SignUp } from './pages/Auth'
+import { ForgotPassword, ResetPassword, SignIn, SignUp } from './pages/Auth'
 
 const Explore = lazy(() => import('./pages/Explore'))
 const NewCase = lazy(() => import('./pages/NewCase'))
@@ -35,9 +35,12 @@ export default function App() {
                 <Route path="about" element={<About />} />
                 <Route path="privacy" element={<Privacy />} />
                 <Route path="terms" element={<Terms />} />
-                <Route path="sign-in" element={<SignIn />} />
-                <Route path="sign-up" element={<SignUp />} />
               </Route>
+
+              <Route path="sign-in" element={<SignIn />} />
+              <Route path="sign-up" element={<SignUp />} />
+              <Route path="forgot-password" element={<ForgotPassword />} />
+              <Route path="reset-password" element={<ResetPassword />} />
 
               <Route path="app" element={<RequireAuth />}>
                 <Route element={<AppLayout />}>

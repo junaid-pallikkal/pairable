@@ -1,4 +1,4 @@
-# SOLVIA
+# RePair
 
 Find your solver. Describe a problem, get ranked and explained matches, connect, collaborate, resolve.
 
@@ -12,6 +12,7 @@ Docs are in [docs/](docs). Decisions that differ from the plan are in [docs/DECI
    1. `supabase/schema.sql`: tables, access rules, matching, connections, collaboration, seed skills.
    2. `supabase/assistant.sql`: hourly limit for the AI helper.
    3. `supabase/phase9.sql`: resources, blocking, reports, verification, admin tools.
+   4. Optional: `supabase/demo.sql` adds 6 demo people, 6 public problems and 6 resources so the app looks lived-in. Remove them any time with `supabase/demo_remove.sql`.
 3. `npm install` then `npm run dev`.
 4. Make yourself an admin (replace the email), in the SQL editor:
    ```sql
@@ -47,13 +48,14 @@ Security audit: run `supabase/audit.sql` in the SQL editor. Checks 1 to 4 must r
 
 ## Deploy
 
-Static site. Build with `npm run build` and host `dist/` on Vercel, Netlify or Cloudflare Pages. `vercel.json` and `public/_headers` already add the single-page fallback (Vercel) and security headers including a Content Security Policy. If you change the inline theme script in `index.html`, recompute its hash in both files.
+Static site. Build with `npm run build` and host `dist/` on Vercel, Netlify or Cloudflare Pages. `vercel.json` and `public/_headers` already add the single-page fallback (Vercel) and security headers including a Content Security Policy.
 
 ## Launch checklist
 
 - [ ] Use a separate production Supabase project. Run the three SQL files there.
 - [ ] Turn on email confirmation and set a real SMTP sender (the built-in mailer is rate limited).
-- [ ] Add your site URL to Supabase Auth redirect URLs.
+- [ ] Add your site URL to Supabase Auth redirect URLs, including `/reset-password` (used by the forgot-password email).
+- [ ] Run `supabase/demo_remove.sql` so no demo people or problems appear in production.
 - [ ] Rotate any key that was ever pasted into chat, a file or a commit.
 - [ ] `supabase/audit.sql` returns no rows for checks 1 to 4.
 - [ ] `npm run test:e2e` passes on a test project.

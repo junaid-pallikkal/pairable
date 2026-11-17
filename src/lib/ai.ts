@@ -41,3 +41,38 @@ export async function interpretProblem(text: string, skills: string[], categorie
   if (!res.result) throw new AiUnavailable('empty')
   return res.result
 }
+
+export interface Understood {
+  title: string
+  summary: string
+  keywords: string[]
+  /** true when the AI helped, false when only the plain text was used */
+  ai: boolean
+}
+
+/** First sentence, trimmed: used when the AI is not available. */
+function firstSentence(text: string, max: number): string {
+  const s = text.trim().replace(/\s+/g, ' ').split(/(?<=[.!?])\s/)[0]
+  return s.length > max ? s.slice(0, max - 1).trimEnd() + '…' : s
+}
+
+/**
+ * Turn what a person wrote into a title, a short summary and extra related words.
+ * Never fails: without the AI, matching still works from the text itself.
+ */
+export async function understand(kind: 'problem' | 'offer', text: string): Promise<Understood> {
+  try {
+    const res = await call<{ result?: { title: string; summary: string; keywords: string[] } }>({ task: 'understand', kind, text })
+    if (res.result && (res.result.title || res.result.summary)) {
+      return {
+        title: res.result.title || firstSentence(text, 90),
+        summary: res.result.summary || firstSentence(text, 280),
+        keywords: res.result.keywords ?? [],
+        ai: true,
+      }
+    }
+  } catch {
+    /* fall through to the plain version */
+  }
+  return { title: firstSentence(text, 90), summary: text.trim().slice(0, 280), keywords: [], ai: false }
+}
