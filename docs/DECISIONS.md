@@ -1,0 +1,25 @@
+# Decisions
+
+Deviations from the planning docs, made to fit the 4-hour build in SCOPE.md. Product-level ones need owner sign-off.
+
+| ID | Decision | Reason | Status |
+|---|---|---|---|
+| D-01 | One file `supabase/schema.sql`, run once in the SQL editor, instead of numbered migrations. | No CLI login or DB password available; TASKS.md asks for `schema.sql`. | accepted |
+| D-02 | Matching runs as the Postgres function `run_matching` (weights fixed in the function), not an Edge Function with a `matching_config` table. | Nothing to deploy; same rules and explanations. Weights: skill 0.5, experience 0.2, availability 0.2, reliability 0.1; factors without real data are excluded and weights re-normalised. | accepted |
+| D-03 | Conversations are keyed by connection (`messages.connection_id`); no separate `conversations` table. | Fewer tables; one chat per connection. | accepted |
+| D-04 | Either side can start a request (`connections.initiated_by`). The other side responds. | Lets solvers offer help on public problems from Explore. | accepted |
+| D-05 | Cases and connections change status only through functions (guard trigger + `app.rpc` flag). | Keeps state machines honest. | accepted |
+| D-06 | Packages added: `react-router`, `lucide-react`, `motion`. No shadcn, TanStack Query, zod or react-hook-form. | Owner choice. Small hand-written components in `src/components`. | accepted |
+| D-07 | Font loaded from Google Fonts in `index.html`. | Avoids another package. | accepted |
+| D-08 | Skills are matched by the skills a person lists, not free text. The composer suggests skills by finding skill names in the description. | Real, explainable, no AI needed. | accepted |
+| D-09 | Not built in phases 1-7: file attachments, groups, resources, reports and blocks, admin pages, AI interpretation, voice, email notifications. | Out of the requested phases or too large for the time box. | open |
+| D-10 | Any signed-in user can read profiles marked "Let people find me". Matched solvers can read a case's full text when its visibility allows. | Simplest rule that works with RLS; tighten before launch. | open |
+| D-11 | `public_cases` view runs with the owner's rights (it hides owner and private fields on purpose). | Visitors need to browse without signing in. | accepted |
+| D-12 | Visual style changed to the owner's reference image: beige canvas, floating white sidebar, cream dotted work surface, black active states, soft white cards, black "+" circle for the main create action. Styling only. | Owner request. Replaces the green palette in DESIGN.md. | accepted |
+| D-13 | No signal colours (red, yellow, blue, green). Status is shown by icon, label and black, outlined or grey chips. Errors show an alert icon and bold text. | Owner request. Keeps meaning independent of colour. | accepted |
+| D-14 | Palette updated to the second reference: white surfaces, black actions, one yellow accent (#fbbc15). Still no red, blue or green. | Owner request. Replaces the beige palette of D-12. | accepted |
+| D-15 | AI helper is one Edge Function `ai` (chat and problem suggestions) with the key held server-side, 30 calls per person per hour. The browser bubble works without it (shortcuts only) and says so honestly. | Key must never reach the browser; function cannot be deployed from here. Anthropic is the default provider. | accepted, needs deploy and key |
+| D-16 | Voice input uses the browser's speech recognition (en-IN). Hidden when unsupported. No server speech. | Plan Phase 8. | accepted |
+| D-17 | Phase 9 delivered: resources (offer, ask, availability, matching, requests), blocking, reporting, verification levels set by admin, suspended accounts locked out, admin area (overview, people, problems, reports, verification, categories, log) with every admin action in an audit log. | Plan Phase 9. | accepted |
+| D-18 | Phase 9 NOT delivered: groups and organisations, disputes, file attachments, document upload for verification, email notifications. | Too large for this pass; verification is a manual admin decision with a note. | open |
+| D-19 | Phase 10 delivered without new packages: integration test `scripts/e2e.mjs` (plain Node), `supabase/audit.sql`, security headers and CSP, smaller first load, README launch checklist. Vitest and Playwright not added. | SCOPE.md says ask before adding packages. | open: say if you want them |
