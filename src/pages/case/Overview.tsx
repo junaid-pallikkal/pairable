@@ -106,7 +106,7 @@ function EditModal({
   async function save() {
     const e: typeof err = {}
     if (title.trim().length < 3) e.title = 'Add a short title.'
-    if (sel.length === 0) e.skills = 'Add at least one skill.'
+    if (sel.length === 0 && skills.length > 0) e.skills = 'Add at least one skill.'
     setErr(e)
     if (Object.keys(e).length) return
     setBusy(true)
@@ -117,8 +117,10 @@ function EditModal({
           .update({ title: title.trim(), description: desc.trim(), urgency: urgency || null, visibility })
           .eq('id', c.id),
       )
-      unwrap(await supabase.from('case_skills').delete().eq('case_id', c.id))
-      unwrap(await supabase.from('case_skills').insert(sel.map((s) => ({ case_id: c.id, skill_id: s.id, importance: s.level }))))
+      if (skills.length > 0) {
+        unwrap(await supabase.from('case_skills').delete().eq('case_id', c.id))
+        unwrap(await supabase.from('case_skills').insert(sel.map((s) => ({ case_id: c.id, skill_id: s.id, importance: s.level }))))
+      }
       toast.success('Saved.')
       onSaved()
     } catch (er) {
@@ -133,10 +135,12 @@ function EditModal({
       <div className="space-y-4">
         <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} error={err.title} />
         <Textarea label="Details" rows={5} value={desc} onChange={(e) => setDesc(e.target.value)} />
-        <div>
-          <SkillPicker value={sel} onChange={setSel} levels={IMPORTANCE} label="Skills needed" />
-          {err.skills && <p className="mt-1.5 text-sm text-danger">{err.skills}</p>}
-        </div>
+        {skills.length > 0 && (
+          <div>
+            <SkillPicker value={sel} onChange={setSel} levels={IMPORTANCE} label="Skills needed" />
+            {err.skills && <p className="mt-1.5 text-sm text-danger">{err.skills}</p>}
+          </div>
+        )}
         <Select label="How soon?" value={urgency} onChange={(e) => setUrgency(e.target.value)}>
           <option value="">No rush</option>
           <option value="urgent">Urgent</option>

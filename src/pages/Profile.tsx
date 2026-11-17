@@ -1,11 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { HandHeart, Handshake, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth, useMe } from '../lib/auth'
 import { errorMessage, unwrap, useData } from '../lib/data'
 import type { Availability, Intent } from '../lib/types'
-import { Button, Card, ListSkeleton, PageHeader } from '../components/ui'
+import { Button, Card, ListSkeleton, PageHeader, PageSpinner } from '../components/ui'
 import { Checkbox, Input, Select, Textarea } from '../components/forms'
 import { PROFICIENCY, SkillPicker, type SkillSel } from '../components/SkillPicker'
 import { useToast } from '../components/Toast'
@@ -138,38 +138,82 @@ function ProfileEditor({ initialIntent, onboarding }: { initialIntent?: Intent; 
 }
 
 export function Onboarding() {
-  const { profile } = useMe()
-  const [intent, setIntent] = useState<Intent | null>(profile.onboarded_at ? profile.intent : null)
+  const { id } = useMe()
+  const { refreshProfile } = useAuth()
+  const nav = useNavigate()
+  const toast = useToast()
+  const [busy, setBusy] = useState<Intent | null>(null)
+  const auto = useRef(false)
+  const [known] = useState(() => {
+    try {
+      const s = localStorage.getItem('repair_intent')
+      return s === 'seeker' || s === 'solver'
+    } catch {
+      return false
+    }
+  })
 
-  if (!intent) {
-    const opts: { v: Intent; icon: typeof Search; title: string }[] = [
-      { v: 'seeker', icon: Search, title: 'I need help' },
-      { v: 'solver', icon: HandHeart, title: 'I can help' },
-      { v: 'both', icon: Handshake, title: 'Both' },
-    ]
-    return (
-      <div className="mx-auto max-w-xl">
-        <h1 className="mb-6 text-2xl font-bold">What brings you here?</h1>
-        <div className="grid gap-3">
-          {opts.map((o) => (
-            <button
-              key={o.v}
-              onClick={() => setIntent(o.v)}
-              className="flex min-h-16 items-center gap-4 rounded-2xl border border-line bg-surface px-5 text-left font-semibold hover:border-primary"
-            >
-              <o.icon className="text-primary" aria-hidden /> {o.title}
-            </button>
-          ))}
-        </div>
-      </div>
-    )
+  async function choose(intent: Intent) {
+    setBusy(intent)
+    try {
+      unwrap(await supabase.from('profiles').update({ intent, onboarded_at: new Date().toISOString() }).eq('id', id))
+      try {
+        localStorage.removeItem('repair_intent')
+      } catch {
+        /* ignore */
+      }
+      await refreshProfile()
+      nav(intent === 'solver' ? '/app/offer' : intent === 'seeker' ? '/app/ask' : '/app', { replace: true })
+    } catch (e) {
+      toast.error(errorMessage(e))
+      setBusy(null)
+    }
   }
+
+  // Arrived from a button on the landing page: skip the question
+  useEffect(() => {
+    if (auto.current) return
+    auto.current = true
+    let saved: string | null = null
+    try {
+      saved = localStorage.getItem('repair_intent')
+    } catch {
+      /* ignore */
+    }
+    if (saved === 'seeker' || saved === 'solver') choose(saved)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  if (known) return <PageSpinner />
+
+  const cards: { v: Intent; icon: typeof Search; title: string; text: string }[] = [
+    { v: 'seeker', icon: Search, title: 'I need someone', text: 'Tell Pip what you need. Swipe through the people who can help.' },
+    { v: 'solver', icon: HandHeart, title: 'I can help', text: 'Tell Pip what you offer. Get matched, or browse problems.' },
+  ]
   return (
-    <div className="mx-auto max-w-xl">
-      <h1 className="mb-6 text-2xl font-bold">Your profile</h1>
-      <Card>
-        <ProfileEditor initialIntent={intent} onboarding />
-      </Card>
+    <div className="mx-auto max-w-2xl">
+      <h1 className="mb-8 text-center text-3xl font-bold tracking-tight">How would you like to start?</h1>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {cards.map((c) => (
+          <button
+            key={c.v}
+            disabled={!!busy}
+            onClick={() => choose(c.v)}
+            className="group rounded-[2rem] bg-surface p-7 text-left shadow-card transition duration-200 hover:-translate-y-1 hover:shadow-float disabled:opacity-60"
+          >
+            <span className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-black">
+              <c.icon size={26} aria-hidden />
+            </span>
+            <span className="block text-xl font-bold">{c.title}</span>
+            <span className="mt-1 block text-sm text-muted">{c.text}</span>
+          </button>
+        ))}
+      </div>
+      <p className="mt-6 text-center">
+        <button disabled={!!busy} onClick={() => choose('both')} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold underline">
+          <Handshake size={16} aria-hidden /> Both, I’ll decide later
+        </button>
+      </p>
     </div>
   )
 }

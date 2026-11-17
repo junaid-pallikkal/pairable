@@ -7,9 +7,10 @@ import {
   LogOut,
   MessageSquare,
   Package,
-  Search,
   Settings,
   Shield,
+  Sparkles,
+  User,
   Users,
   type LucideIcon,
 } from 'lucide-react'
@@ -17,6 +18,10 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { ButtonLink, IconButton, PageSpinner } from './ui'
 import { Assistant } from './Assistant'
+import { Modal } from './Modal'
+import { Input } from './forms'
+import { Button } from './ui'
+import { useToast } from './Toast'
 import { BotHead } from './Mascot'
 
 /* ---------- Logo & theme ---------- */
@@ -43,7 +48,7 @@ export function PublicLayout() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
           <Logo />
           <nav className="hidden items-center gap-6 text-sm font-semibold sm:flex" aria-label="Main">
-            <NavLink to="/explore" className="hover:text-primary">Explore</NavLink>
+            <NavLink to={session ? '/app/explore' : '/explore'} className="hover:text-primary">Explore</NavLink>
             <NavLink to="/how-it-works" className="hover:text-primary">How it works</NavLink>
           </nav>
           <div className="flex items-center gap-1">
@@ -102,19 +107,77 @@ function Suspended() {
   )
 }
 
+/* ---------- Guest accounts ---------- */
+
+function GuestBanner() {
+  const toast = useToast()
+  const [open, setOpen] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function save() {
+    if (!email.includes('@')) return setErr('Enter a valid email.')
+    if (password.length < 8) return setErr('Use at least 8 characters for the password.')
+    setErr('')
+    setBusy(true)
+    const { error } = await supabase.auth.updateUser({ email: email.trim(), password })
+    setBusy(false)
+    if (error) return setErr(error.message.toLowerCase().includes('already') ? 'This email already has an account.' : "Couldn't save. Please try again.")
+    toast.success('Check your email to confirm. Your matches are kept.')
+    setOpen(false)
+  }
+
+  return (
+    <>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-accent px-5 py-3 text-black">
+        <p className="text-sm font-semibold">You are using RePair as a guest. Save your account so you never lose your matches.</p>
+        <button onClick={() => setOpen(true)} className="min-h-10 rounded-xl bg-fg px-4 text-sm font-semibold text-bg">Save my account</button>
+      </div>
+      <Modal open={open} title="Save your account" onClose={() => setOpen(false)}>
+        <div className="space-y-4">
+          <Input label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input label="Password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} error={err} />
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setOpen(false)}>Not now</Button>
+            <Button loading={busy} onClick={save}>Save</Button>
+          </div>
+        </div>
+      </Modal>
+    </>
+  )
+}
+
 /* ---------- App layout ---------- */
 
-const NAV: { to: string; label: string; icon: LucideIcon; end?: boolean }[] = [
-  { to: '/app', label: 'Dashboard', icon: Home, end: true },
-  { to: '/app/find', label: 'Find solvers', icon: Search },
-  { to: '/app/explore', label: 'Explore', icon: Compass },
-  { to: '/app/connections', label: 'Connections', icon: Users },
-  { to: '/app/messages', label: 'Messages', icon: MessageSquare },
-  { to: '/app/resources', label: 'Resources', icon: Package },
-  { to: '/app/settings', label: 'Settings', icon: Settings },
-]
-const ADMIN_ITEM = { to: '/app/admin', label: 'Admin', icon: Shield, end: false }
-const MOBILE = ['/app', '/app/find', '/app/messages', '/app/connections', '/app/settings'].map((t) => NAV.find((n) => n.to === t)!)
+type NavItem = { to: string; label: string; icon: LucideIcon; end?: boolean }
+const N = {
+  home: { to: '/app', label: 'Dashboard', icon: Home, end: true },
+  ask: { to: '/app/ask', label: 'Ask Pip', icon: Sparkles },
+  offer: { to: '/app/offer', label: 'My profile', icon: User },
+  explore: { to: '/app/explore', label: 'Explore', icon: Compass },
+  connections: { to: '/app/connections', label: 'Connections', icon: Users },
+  messages: { to: '/app/messages', label: 'Messages', icon: MessageSquare },
+  resources: { to: '/app/resources', label: 'Resources', icon: Package },
+  settings: { to: '/app/settings', label: 'Settings', icon: Settings },
+} satisfies Record<string, NavItem>
+const ADMIN_ITEM: NavItem = { to: '/app/admin', label: 'Admin', icon: Shield, end: false }
+
+/** Each kind of person only sees what they need. */
+function navFor(intent: string | undefined, admin: boolean): NavItem[] {
+  const base =
+    intent === 'seeker'
+      ? [N.home, N.explore, N.ask, N.connections, N.messages, N.resources, N.settings]
+      : intent === 'solver'
+        ? [N.home, N.explore, N.offer, N.connections, N.messages, N.resources, N.settings]
+        : [N.home, N.explore, N.ask, N.offer, N.connections, N.messages, N.resources, N.settings]
+  return admin ? [...base, ADMIN_ITEM] : base
+}
+function mobileFor(intent: string | undefined): NavItem[] {
+  const main = intent === 'solver' ? N.offer : N.ask
+  return [N.home, N.explore, main, N.messages, N.settings]
+}
 
 function useUnread(uid: string | undefined) {
   const [n, setN] = useState(0)
@@ -145,7 +208,8 @@ const circle = 'rounded-full! border border-fg bg-surface'
 
 export function AppLayout() {
   const { session, profile, signOut } = useAuth()
-  const items = profile?.is_admin ? [...NAV, ADMIN_ITEM] : NAV
+  const items = navFor(profile?.intent, !!profile?.is_admin)
+  const mobile = mobileFor(profile?.intent)
   const unread = useUnread(session?.user.id)
   const nav = useNavigate()
 
@@ -217,6 +281,7 @@ export function AppLayout() {
           </div>
         </header>
         <main id="main" className="mx-auto max-w-5xl px-5 py-6 pb-28 md:px-12 md:py-10 md:pb-16">
+          {session?.user.is_anonymous && <GuestBanner />}
           <Outlet />
         </main>
       </div>
@@ -225,7 +290,7 @@ export function AppLayout() {
         aria-label="App"
         className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-5 gap-1 rounded-2xl bg-surface p-1.5 shadow-float md:hidden"
       >
-        {MOBILE.map(({ to, label, icon: Icon, end }) => (
+        {mobile.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}

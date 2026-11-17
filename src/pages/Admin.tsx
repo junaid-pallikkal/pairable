@@ -11,7 +11,7 @@ import { Input, Select, Textarea } from '../components/forms'
 import { ConfirmDialog, Modal } from '../components/Modal'
 import { useToast } from '../components/Toast'
 
-type Tab = 'overview' | 'users' | 'problems' | 'reports' | 'verification' | 'categories' | 'log'
+type Tab = 'overview' | 'waiting' | 'users' | 'problems' | 'reports' | 'verification' | 'categories' | 'log'
 
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
   return unwrap(await supabase.rpc(fn, args)) as T
@@ -35,32 +35,84 @@ function Table({ head, children }: { head: string[]; children: React.ReactNode }
 }
 
 /* ---------- Overview ---------- */
-function Overview() {
+function Overview({ onGo }: { onGo: (t: Tab) => void }) {
   const q = useData(() => rpc<Record<string, number>>('admin_overview'), [])
   if (q.loading) return <ListSkeleton rows={2} />
   if (q.error || !q.data) return <ErrorState message={q.error ?? "Couldn't load."} onRetry={q.reload} />
   const d = q.data
+  const attention: { label: string; n: number; tab: Tab }[] = [
+    { label: 'Reports to review', n: d.reports_open, tab: 'reports' },
+    { label: 'Verifications waiting', n: d.verifications_pending, tab: 'verification' },
+    { label: 'Problems with no match yet', n: d.waiting_problems, tab: 'waiting' },
+  ]
   const stats: [string, number][] = [
     ['People', d.users],
-    ['Suspended or banned', d.suspended],
-    ['Open problems', d.cases_open],
+    ['Helpers with a profile', d.helpers],
+    ['Active problems', d.cases_open],
     ['Resolved problems', d.cases_resolved],
     ['Connections made', d.connections_accepted],
     ['Resources listed', d.resources],
-    ['Reports to review', d.reports_open],
-    ['Verifications waiting', d.verifications_pending],
+    ['Suspended or banned', d.suspended],
   ]
   return (
-    <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {stats.map(([label, n]) => (
-        <li key={label}>
-          <Card>
-            <p className="text-3xl font-bold tabular-nums">{n}</p>
-            <p className="mt-1 text-sm text-muted">{label}</p>
-          </Card>
-        </li>
-      ))}
-    </ul>
+    <div className="space-y-8">
+      <section>
+        <h2 className="mb-3 text-lg font-bold">Needs your attention</h2>
+        <ul className="grid gap-4 sm:grid-cols-3">
+          {attention.map((a) => (
+            <li key={a.label}>
+              <button
+                onClick={() => onGo(a.tab)}
+                className={`flex h-full w-full flex-col rounded-3xl p-6 text-left shadow-card transition hover:-translate-y-1 hover:shadow-float ${a.n > 0 ? 'bg-accent text-black' : 'bg-surface'}`}
+              >
+                <span className="text-5xl font-bold tabular-nums">{a.n}</span>
+                <span className="mt-1 text-sm font-semibold">{a.label}</span>
+                <span className="mt-3 text-xs font-semibold underline">{a.n > 0 ? 'Open' : 'All clear'}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section>
+        <h2 className="mb-3 text-lg font-bold">The numbers</h2>
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {stats.map(([label, n]) => (
+            <li key={label}>
+              <Card>
+                <p className="text-3xl font-bold tabular-nums">{n}</p>
+                <p className="mt-1 text-sm text-muted">{label}</p>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  )
+}
+
+/* ---------- Problems nobody matches yet ---------- */
+function Waiting() {
+  const q = useData(
+    () => rpc<{ id: string; title: string; owner_name: string; created_at: string; visibility: string }[]>('admin_waiting'),
+    [],
+  )
+  if (q.loading) return <ListSkeleton />
+  if (q.error) return <ErrorState message={q.error} onRetry={q.reload} />
+  if (q.data!.length === 0) return <EmptyState icon={Check} title="Every problem has at least one match." />
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted">These people are waiting. Helpers with the right skills would make a difference.</p>
+      <Table head={['Problem', 'Owner', 'Posted', 'Visible to helpers']}>
+        {q.data!.map((p) => (
+          <tr key={p.id}>
+            <td className="max-w-md font-semibold">{p.title}</td>
+            <td>{p.owner_name}</td>
+            <td className="text-xs text-muted">{timeAgo(p.created_at)}</td>
+            <td className="text-xs text-muted">{p.visibility === 'public_anonymised' ? 'Yes' : 'No'}</td>
+          </tr>
+        ))}
+      </Table>
+    </div>
   )
 }
 
@@ -534,6 +586,7 @@ export default function Admin() {
       <Tabs
         tabs={[
           { id: 'overview', label: 'Overview' },
+          { id: 'waiting', label: 'Waiting' },
           { id: 'users', label: 'People' },
           { id: 'problems', label: 'Problems' },
           { id: 'reports', label: 'Reports' },
@@ -544,7 +597,8 @@ export default function Admin() {
         value={tab}
         onChange={setTab}
       />
-      {tab === 'overview' && <Overview />}
+      {tab === 'overview' && <Overview onGo={setTab} />}
+      {tab === 'waiting' && <Waiting />}
       {tab === 'users' && <Users />}
       {tab === 'problems' && <Problems />}
       {tab === 'reports' && <Reports />}

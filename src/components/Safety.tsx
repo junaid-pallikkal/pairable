@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Ban, BadgeCheck, Flag } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { useMe } from '../lib/auth'
+import { useAuth, useMe } from '../lib/auth'
 import { errorMessage, unwrap } from '../lib/data'
 import { Button, Chip } from './ui'
 import { Select, Textarea } from './forms'
@@ -21,7 +21,9 @@ export function VerificationBadge({ level }: { level?: string | null }) {
 export type ReportTarget = 'user' | 'case' | 'message' | 'resource'
 
 export function ReportButton({ type, id, className = '' }: { type: ReportTarget; id: string; className?: string }) {
+  const { session } = useAuth()
   const [open, setOpen] = useState(false)
+  if (!session) return null // reporting needs an account
   return (
     <>
       <button

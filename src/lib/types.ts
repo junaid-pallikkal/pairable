@@ -16,6 +16,10 @@ export interface Profile {
   is_admin: boolean
   status: string
   onboarded_at: string | null
+  offer_text?: string | null
+  offer_summary?: string | null
+  verification?: string
+  is_demo?: boolean
 }
 
 export interface Category {
@@ -40,6 +44,8 @@ export type Visibility = 'private' | 'matched_only' | 'public_anonymised'
 export type Urgency = 'flexible' | 'this_month' | 'this_week' | 'urgent'
 
 export interface Case {
+  summary?: string | null
+  stems?: string[]
   id: string
   owner_id: string
   title: string
@@ -189,4 +195,6 @@ export interface PersonLite {
   availability_status: Availability
   verification?: string
   is_demo?: boolean
+  offer_text?: string | null
+  offer_summary?: string | null
 }

@@ -236,5 +236,171 @@ if (!has9) {
   await solver.from('resources').delete().eq('id', res.id)
 }
 
+// ============================================================
+// Free-text flow (needs supabase/ai_matching.sql applied)
+// ============================================================
+const hasText = !(await seeker.from('synonyms').select('word').limit(1)).error
+if (!hasText) {
+  console.log('\nSKIP free-text checks: run supabase/ai_matching.sql first')
+} else {
+  console.log('\n-- free-text flow: helper writes what she offers')
+  const grandma = 'I am a grandmother who loves telling bedtime stories to children. My grandchildren live far away now, so I have no little ones to tell my stories to.'
+  expectErr('too-short offer rejected', await solver.rpc('save_offer', { p_text:'hi' }))
+  const so = must('helper saves offer', await solver.rpc('save_offer', { p_text:grandma, p_headline:'Grandmother who loves telling bedtime stories', p_summary:'A grandmother with bedtime stories.', p_keywords:[], p_city:'Kochi' }))
+  ok('save_offer returns a count', typeof so?.matched_problems === 'number', JSON.stringify(so))
+  const me2 = must('helper profile read back', await solver.from('profiles').select('offer_text,offer_stems,intent,headline').eq('id', V).single())
+  ok('profile keeps offer text and builds stems', me2?.offer_text?.includes('bedtime') && me2?.offer_stems?.length > 3, 'stems=' + me2?.offer_stems?.length)
+  ok('helper stays a helper', me2?.intent === 'solver' || me2?.intent === 'both')
+
+  console.log('-- free-text flow: seeker tells Pip')
+  expectErr('too-short problem rejected', await seeker.rpc('submit_problem', { p_text:'help' }))
+  const sp = must('seeker submits problem', await seeker.rpc('submit_problem', { p_text:'I want a grandmother to tell bedtime stories to my kids', p_title:null, p_summary:null, p_keywords:[], p_public:true }))
+  ok('problem matched at least one helper', sp?.matches >= 1, 'matches=' + sp?.matches)
+  const tm = must('read text matches', await seeker.from('matches').select('id,profile_id,score,explanation,hits,breakdown,decision').eq('case_id', sp.case_id).order('rank'))
+  const mv = tm?.find(m => m.profile_id === V)
+  ok('the grandmother is among the matches', !!mv)
+  ok('explanation lists real words', /Matches on:/.test(mv?.explanation ?? '') && /stor/.test(mv?.explanation ?? ''), mv?.explanation)
+  ok('breakdown is the text type', mv?.breakdown?.type === 'text' && mv?.breakdown?.hits?.length >= 2, JSON.stringify(mv?.breakdown?.hits))
+  ok('scores are between 0 and 1', tm?.every(m => m.score >= 0 && m.score <= 1))
+  ok('seeker is not matched with self', !tm?.some(m => m.profile_id === S))
+  const solverRows = must('helper sees only own match rows', await solver.from('matches').select('profile_id').eq('case_id', sp.case_id))
+  ok('helper sees only their row', solverRows?.length === 1 && solverRows[0].profile_id === V)
+
+  console.log('-- free-text flow: synonyms and unrelated problems')
+  const syn = must('synonym problem', await seeker.rpc('submit_problem', { p_text:'Looking for a granny to read tales to my children at night', p_public:false }))
+  const synRows = await seeker.from('matches').select('profile_id').eq('case_id', syn.case_id)
+  ok('granny/tales/children still finds the grandmother', synRows.data?.some(m => m.profile_id === V))
+  const un = must('unrelated problem', await seeker.rpc('submit_problem', { p_text:'I need a plumber to fix a leaking tap in my kitchen sink', p_public:false }))
+  const unRows = await seeker.from('matches').select('profile_id').eq('case_id', un.case_id)
+  ok('storyteller is not matched to a plumbing problem', !unRows.data?.some(m => m.profile_id === V))
+
+  console.log('-- free-text flow: swipe')
+  expectErr('helper cannot decide on the seeker matches', await solver.rpc('decide_match', { p_match:mv.id, p_choose:true, p_message:'x' }))
+  const other = tm.find(m => m.profile_id !== V)
+  if (other) {
+    must('seeker passes on someone', await seeker.rpc('decide_match', { p_match:other.id, p_choose:false }))
+    const pd = await seeker.from('matches').select('decision').eq('id', other.id).single()
+    ok('pass is remembered', pd.data?.decision === 'passed')
+  }
+  const chosen = must('seeker chooses the grandmother', await seeker.rpc('decide_match', { p_match:mv.id, p_choose:true, p_message:'I want a grandmother to tell bedtime stories to my kids' }))
+  ok('choosing creates a request', !!chosen)
+  const asked = must('helper sees the request', await solver.from('connections').select('status,message').eq('id', chosen).single())
+  ok('request is pending with the problem as message', asked?.status === 'pending' && /bedtime/.test(asked?.message ?? ''))
+  expectErr('choosing twice is blocked', await seeker.rpc('decide_match', { p_match:mv.id, p_choose:true, p_message:'again' }))
+  must('helper accepts', await solver.rpc('transition_connection', { p_id:chosen, p_action:'accept' }))
+  must('helper writes first message', await solver.from('messages').insert({ connection_id:chosen, sender_id:V, body:'Hello! I would love to tell stories.' }))
+
+  console.log('-- free-text flow: helper browses problems')
+  const bp = must('helper browse, no search', await solver.rpc('problems_for_helper', { p_query:'' }))
+  ok('browse returns a list', Array.isArray(bp))
+  const bq = must('helper browse, typed search', await solver.rpc('problems_for_helper', { p_query:'stories for children' }))
+  ok('typed search finds public story problems with hits', bq?.some(p => p.hits?.length >= 1))
+  ok('private problems are not listed', !bq?.some(p => p.id === syn.case_id || p.id === un.case_id))
+  ok('own problems are not listed to their owner', !(await seeker.rpc('problems_for_helper', { p_query:'stories' })).data?.some(p => p.id === sp.case_id))
+
+  console.log('-- free-text flow: waiting problem, then a helper appears')
+  const wait = must('seeker posts a problem nobody can help with', await seeker.rpc('submit_problem', { p_text:'Need someone to assemble an IKEA wardrobe and shelves in my flat', p_public:true }))
+  ok('nobody matches yet', wait?.matches === 0, 'matches=' + wait?.matches)
+  const stillWaiting = await solver.rpc('problems_for_helper', { p_query:'wardrobe' })
+  ok('helper can find it by searching and it says waiting', stillWaiting.data?.some(p => p.id === wait.case_id && p.waiting === true))
+  const so2 = must('helper adds furniture skills', await solver.rpc('save_offer', { p_text: grandma + ' I also assemble furniture, wardrobes and shelves.' }))
+  ok('the waiting problem is matched', so2?.matched_problems >= 1, JSON.stringify(so2))
+  const note = must('seeker notifications', await seeker.from('notifications').select('kind,title,link').eq('kind', 'new_match'))
+  ok('seeker was told about the new match', note?.some(n => n.link?.includes(wait.case_id)))
+  const notes2 = must('helper notifications', await solver.from('notifications').select('kind'))
+  ok('helper was told about a new problem that fits', notes2?.some(n => n.kind === 'new_problem'))
+
+  console.log('-- free-text flow: admin view')
+  const admin2 = mk()
+  const ad2 = process.env.E2E_ADMIN_EMAIL ? await admin2.auth.signInWithPassword({ email: process.env.E2E_ADMIN_EMAIL, password: process.env.E2E_ADMIN_PASSWORD }) : null
+  if (ad2 && !ad2.error) {
+    const ov2 = must('admin overview with new counts', await admin2.rpc('admin_overview'))
+    ok('overview has helpers and waiting counts', typeof ov2?.helpers === 'number' && typeof ov2?.waiting_problems === 'number', JSON.stringify(ov2))
+    const wl = must('admin waiting list', await admin2.rpc('admin_waiting'))
+    ok('waiting list works', Array.isArray(wl))
+  }
+  const nonAdminWaiting = await seeker.rpc('admin_waiting')
+  ok('normal user cannot read the waiting list', !!nonAdminWaiting.error)
+
+  for (const cid of [sp.case_id, syn.case_id, un.case_id, wait.case_id]) await seeker.rpc('close_case', { p_case:cid })
+}
+
+// ============================================================
+// Explore (needs supabase/explore.sql applied)
+// ============================================================
+const hasExplore = !(await seeker.rpc('explore_problems', { p_query:'', p_sort:'new', p_limit:1 })).error
+if (!hasExplore) {
+  console.log('\nSKIP explore checks: run supabase/explore.sql first')
+} else {
+  console.log('\n-- explore: problems')
+  const ep = must('explore problems', await seeker.rpc('explore_problems', { p_query:'', p_sort:'new', p_limit:60 }))
+  ok('lists public open problems', Array.isArray(ep) && ep.length >= 1, 'count=' + ep?.length)
+  ok('each row has the fields the page needs', ep?.every(r => r.id && r.title && typeof r.waiting === 'boolean' && typeof r.offers === 'number' && Array.isArray(r.hits)))
+  const mine = must('my own problems', await seeker.from('cases').select('id').eq('owner_id', S).eq('visibility', 'public_anonymised'))
+  ok('own problems are not listed', !ep?.some(r => mine?.some(m => m.id === r.id)))
+  const ef = must('explore search', await seeker.rpc('explore_problems', { p_query:'smartphone video calls', p_sort:'new', p_limit:20 }))
+  ok('search finds related problems with hits', ef?.length >= 1 && ef.every(r => r.hits.length >= 1 || /smartphone|video|call/i.test(r.title + r.description)), 'count=' + ef?.length)
+  const ew = must('explore sort waiting', await seeker.rpc('explore_problems', { p_query:'', p_sort:'waiting', p_limit:60 }))
+  ok('waiting sort puts waiting problems first', ew?.length === 0 || ew[0].waiting === true || ew.every(r => !r.waiting))
+  const ebest = must('explore sort best for me', await solver.rpc('explore_problems', { p_query:'', p_sort:'fit', p_limit:60 }))
+  ok('best-for-me sort works for a helper', Array.isArray(ebest))
+  const anonView = await mk().from('public_cases').select('id,title,summary,description,owner_id')
+  ok('signed-out visitors can still see public problems', !anonView.error || /owner_id/.test(anonView.error.message))
+  const anonView2 = await mk().from('public_cases').select('id,title,summary')
+  ok('public view works without owner info', !anonView2.error && anonView2.data.length >= 1)
+  ok('signed-out visitors cannot call the explore functions', !!(await mk().rpc('explore_problems', { p_query:'' })).error)
+
+  console.log('-- explore: solvers')
+  const eh = must('explore helpers', await seeker.rpc('explore_helpers', { p_query:'', p_sort:'new', p_limit:60 }))
+  ok('lists people with a profile', eh?.length >= 1, 'count=' + eh?.length)
+  ok('the grandmother account is listed', eh?.some(h => h.id === V))
+  ok('you are not listed to yourself', !eh?.some(h => h.id === S))
+  ok('only people who wrote what they offer are listed', eh?.every(h => h.about && h.about.length > 0))
+  const ehq = must('explore helpers search', await seeker.rpc('explore_helpers', { p_query:'grandmother stories', p_sort:'new', p_limit:20 }))
+  ok('search finds the storytellers', ehq?.some(h => h.id === V) && ehq.every(h => h.hits.length >= 1 || /grand|stor/i.test(h.about + h.display_name)))
+  expectErr('signed-out visitors cannot list people', await mk().rpc('explore_helpers', { p_query:'' }))
+
+  console.log('-- explore: chat with a solver')
+  expectErr('cannot chat with yourself', await seeker.rpc('contact_helper', { p_helper:S, p_message:'hello there' }))
+  expectErr('empty message rejected', await seeker.rpc('contact_helper', { p_helper:V, p_message:' ' }))
+  const chat = must('seeker chats with the grandmother', await seeker.rpc('contact_helper', { p_helper:V, p_message:'Hi! Are you free this week for a story session?' }))
+  ok('a request was created', !!chat)
+  const cc = must('helper sees the chat request', await solver.from('connections').select('status,message,case_id').eq('id', chat).single())
+  ok('it is pending with the message', cc?.status === 'pending' && /story session/.test(cc?.message ?? ''))
+  const ck = must('chat opener case', await solver.from('cases').select('kind,visibility,status').eq('id', cc.case_id).single())
+  ok('the opener is a private chat, not a problem', ck?.kind === 'chat' && ck?.visibility === 'private')
+  const hiddenFromExplore = await solver.rpc('explore_problems', { p_query:'story session', p_sort:'new', p_limit:50 })
+  ok('chat openers never show in Explore', !hiddenFromExplore.data?.some(p => p.id === cc.case_id))
+  expectErr('messaging the same person twice about the same opener is blocked', await seeker.rpc('send_request', { p_case:cc.case_id, p_solver:V, p_message:'again' }))
+  must('helper answers with a question first', await solver.rpc('transition_connection', { p_id:chat, p_action:'ask' }))
+  must('helper can reply before accepting', await solver.from('messages').insert({ connection_id:chat, sender_id:V, body:'Yes, Thursday works.' }))
+  must('seeker can reply', await seeker.from('messages').insert({ connection_id:chat, sender_id:S, body:'Thursday evening is perfect.' }))
+  must('seeker closes the thread', await seeker.rpc('transition_connection', { p_id:chat, p_action:'cancel' }))
+
+  console.log('-- explore: offer help from a seeker-only account')
+  await seeker.from('profiles').update({ intent:'seeker' }).eq('id', S)
+  const sp2 = must('helper posts a public problem', await solver.rpc('submit_problem', { p_text:'I need someone to help me repot and care for my balcony plants this month', p_public:true }))
+  const before = (await seeker.from('profiles').select('intent').eq('id', S).single()).data?.intent
+  ok('the account is seeker-only before', before === 'seeker')
+  const oh = must('seeker-only account offers help', await seeker.rpc('offer_help', { p_case:sp2.case_id, p_message:'I love plants and can help.' }))
+  ok('offer created', !!oh)
+  const after = (await seeker.from('profiles').select('intent').eq('id', S).single()).data?.intent
+  ok('helping was switched on automatically', after === 'both', 'intent=' + after)
+  expectErr('cannot offer on your own problem', await solver.rpc('offer_help', { p_case:sp2.case_id, p_message:'me' }))
+  expectErr('duplicate offer is blocked', await seeker.rpc('offer_help', { p_case:sp2.case_id, p_message:'again' }))
+  await seeker.from('profiles').update({ intent:'seeker' }).eq('id', S)
+
+  console.log('-- explore: match quality')
+  const ph = must('phones problem', await seeker.rpc('submit_problem', { p_text:'My father is 72 and cannot use a smartphone. He wants to make WhatsApp video calls to his family. I need someone to teach him how to use it.', p_public:false }))
+  const phRows = await seeker.from('matches').select('profile_id').eq('case_id', ph.case_id)
+  ok('storytellers are not matched to a phone-teaching problem', !phRows.data?.some(m => m.profile_id === V), 'matches=' + phRows.data?.length)
+  ok('nobody is matched to it yet, so it waits', phRows.data?.length === 0, 'matches=' + phRows.data?.length)
+  const st = must('story problem again', await seeker.rpc('submit_problem', { p_text:'I want a grandmother to tell bedtime stories to my kids', p_public:false }))
+  const stRows = await seeker.from('matches').select('profile_id').eq('case_id', st.case_id)
+  ok('the grandmother is still matched to the story problem', stRows.data?.some(m => m.profile_id === V))
+
+  for (const cid of [sp2.case_id, ph.case_id, st.case_id]) { await solver.rpc('close_case', { p_case:cid }); await seeker.rpc('close_case', { p_case:cid }) }
+}
+
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED')
 process.exit(fails ? 1 : 0)

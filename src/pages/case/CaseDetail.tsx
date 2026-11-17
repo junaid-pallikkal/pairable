@@ -7,6 +7,7 @@ import { Blocked, EmptyState, ErrorState, ListSkeleton, Tabs } from '../../compo
 import { CaseStatusChip } from '../../components/StatusChip'
 import { Overview } from './Overview'
 import { Matches } from './Matches'
+import { TextMatches } from './TextMatches'
 import { Work } from './Work'
 import { People } from './People'
 
@@ -56,7 +57,8 @@ export default function CaseDetail() {
       {tab === 'overview' && (
         <Overview c={c} skills={skills} isOwner={isOwner} isParticipant={isParticipant} onChanged={data.reload} />
       )}
-      {tab === 'matches' && isOwner && <Matches c={c} skills={skills} connections={conns.data ?? []} onChanged={() => { conns.reload(); data.reload() }} autoRun={params.get('run') === '1'} />}
+      {tab === 'matches' && isOwner && skills.length === 0 && <TextMatches c={c} onChanged={() => { conns.reload(); data.reload() }} />}
+      {tab === 'matches' && isOwner && skills.length > 0 && <Matches c={c} skills={skills} connections={conns.data ?? []} onChanged={() => { conns.reload(); data.reload() }} autoRun={params.get('run') === '1'} />}
       {tab === 'work' &&
         (isParticipant ? (
           <Work c={c} />

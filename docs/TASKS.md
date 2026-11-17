@@ -43,3 +43,16 @@ Tick a box only when done and checked.
 - [x] New sign-in and sign-up pages, forgot password and reset password (login, validation, eye toggle checked; reset email not sent yet)
 - [x] `supabase/demo.sql` applied: 6 people, 6 problems, 6 resources confirmed in the database; demo person ranks first in a matching test
 - [ ] Add `/reset-password` to Supabase Auth redirect URLs, then try Forgot password end to end (you)
+
+## AI-first storytelling flow
+
+- [x] Written: free-text matching SQL, Pip pages (Ask, Offer, Browse), swipe deck, waiting state and notifications, role-aware menu, new dashboards, admin attention view, animated landing
+- [ ] Run `supabase/ai_matching.sql` then `supabase/demo_stories.sql` (you)
+- [ ] Check the whole story in the browser and with the test script after that
+- [ ] Rehearse with docs/DEMO.md
+
+## Explore
+
+- [x] Written: Problems and Solvers tabs, live search, sort, topic chips, Saved, Surprise me, side panel with chat box and flip-through, offer help from any account, chat with a solver
+- [ ] Run `supabase/explore.sql`, then re-run `supabase/demo_stories.sql` (you)
+- [ ] Check Explore end to end after that

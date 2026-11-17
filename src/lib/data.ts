@@ -23,6 +23,7 @@ const KNOWN = [
   'This problem cannot be reopened',
   'Feedback opens after resolution',
   'You cannot invite yourself',
+  'Tell me a little more',
 ]
 export function friendlyError(raw: string): string {
   const hit = KNOWN.find((k) => raw.includes(k))

@@ -12,7 +12,8 @@ Docs are in [docs/](docs). Decisions that differ from the plan are in [docs/DECI
    1. `supabase/schema.sql`: tables, access rules, matching, connections, collaboration, seed skills.
    2. `supabase/assistant.sql`: hourly limit for the AI helper.
    3. `supabase/phase9.sql`: resources, blocking, reports, verification, admin tools.
-   4. Optional: `supabase/demo.sql` adds 6 demo people, 6 public problems and 6 resources so the app looks lived-in. Remove them any time with `supabase/demo_remove.sql`.
+   4. `supabase/ai_matching.sql`: free-text matching, notifications and swipe decisions (the main flow).
+   5. Optional: `supabase/demo.sql` adds 6 demo people, 6 public problems and 6 resources so the app looks lived-in. Then `supabase/demo_stories.sql` adds the storytelling demo (see [docs/DEMO.md](docs/DEMO.md)). Remove all demo data any time with `supabase/demo_remove.sql`.
 3. `npm install` then `npm run dev`.
 4. Make yourself an admin (replace the email), in the SQL editor:
    ```sql

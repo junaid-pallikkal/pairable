@@ -5,7 +5,9 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { Button } from '../components/ui'
 import { Field, Input } from '../components/forms'
-import { BotHead, Mascot } from '../components/Mascot'
+import { BotHead } from '../components/Mascot'
+import { StoryScene } from '../components/StoryScene'
+import { continueAsGuest, GUEST_MESSAGE } from '../lib/guest'
 import { useToast } from '../components/Toast'
 
 function authError(msg: string): string {
@@ -13,7 +15,7 @@ function authError(msg: string): string {
   if (m.includes('invalid login')) return 'Email or password is wrong.'
   if (m.includes('already registered')) return 'This email already has an account.'
   if (m.includes('email not confirmed')) return 'Please confirm your email first. Check your inbox.'
-  if (m.includes('rate limit')) return 'Too many tries. Please wait a minute.'
+  if (m.includes('rate limit') || m.includes('too many') || m.includes('security purposes')) return 'Too many sign-ups right now. Wait a minute and try again, sign in if you have an account, or continue as a guest.'
   if (m.includes('password')) return 'Password must be at least 8 characters.'
   return "Couldn't continue. Please try again."
 }
@@ -45,7 +47,7 @@ function AuthShell({ title, hint, children, footer }: { title: string; hint?: st
             </p>
             <p className="mt-5 max-w-xs text-sm text-white/70">Tell us the problem. We find the people who can help.</p>
           </div>
-          <Mascot className="absolute bottom-0 left-1/2 h-[24rem] w-auto -translate-x-1/2" />
+          <StoryScene className="absolute inset-x-0 bottom-0 h-auto w-full" />
         </div>
 
         {/* form */}
@@ -60,6 +62,35 @@ function AuthShell({ title, hint, children, footer }: { title: string; hint?: st
           <p className="mt-8 text-center text-sm text-muted">{footer}</p>
         </div>
       </div>
+    </div>
+  )
+}
+
+/** A way in that needs no email: useful when sign-up emails are rate limited. */
+function GuestButton({ to }: { to: string }) {
+  const nav = useNavigate()
+  const toast = useToast()
+  const [busy, setBusy] = useState(false)
+  return (
+    <div className="mt-5">
+      <div className="mb-4 flex items-center gap-3 text-xs text-muted" aria-hidden>
+        <span className="h-px flex-1 bg-line" /> or <span className="h-px flex-1 bg-line" />
+      </div>
+      <Button
+        type="button"
+        variant="secondary"
+        loading={busy}
+        className="w-full !min-h-12"
+        onClick={async () => {
+          setBusy(true)
+          const r = await continueAsGuest()
+          setBusy(false)
+          if (r === 'ok') nav(to, { replace: true })
+          else toast.error(GUEST_MESSAGE[r])
+        }}
+      >
+        Continue as a guest
+      </Button>
     </div>
   )
 }
@@ -161,6 +192,7 @@ export function SignIn() {
           Log in
         </Button>
       </form>
+      <GuestButton to={from} />
     </AuthShell>
   )
 }
@@ -236,6 +268,7 @@ export function SignUp() {
           Create account
         </Button>
       </form>
+      <GuestButton to={from} />
     </AuthShell>
   )
 }

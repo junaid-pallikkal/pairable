@@ -104,3 +104,23 @@ body {
 .drift { animation: drift 9s ease-in-out infinite; }
 .marquee-track { animation: marquee 40s linear infinite; width: max-content; }
 .marquee:hover .marquee-track { animation-play-state: paused; }
+
+/* ---- StoryScene (landing and login art) ---- */
+@keyframes sc-twinkle { 0%, 100% { opacity: 0.35; transform: scale(0.7); } 50% { opacity: 1; transform: scale(1.15); } }
+@keyframes sc-bob { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-3px) rotate(1.2deg); } }
+@keyframes sc-mouth { 0%, 100% { transform: scaleY(0.35); } 25% { transform: scaleY(1); } 50% { transform: scaleY(0.5); } 75% { transform: scaleY(1.05); } }
+@keyframes sc-page { 0%, 100% { transform: rotate(0deg) skewY(0); } 50% { transform: rotate(-6deg) skewY(-3deg); } }
+@keyframes sc-bubble { 0%, 8% { opacity: 0; transform: scale(0.7); } 16%, 78% { opacity: 1; transform: scale(1); } 90%, 100% { opacity: 0; transform: scale(0.9); } }
+@keyframes sc-dash { to { stroke-dashoffset: -48; } }
+@keyframes sc-heart { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-46px) scale(0.9); } }
+@keyframes sc-wave { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(14deg); } }
+@keyframes sc-pulse { 0%, 100% { transform: scale(0.8); } 50% { transform: scale(1.1); } }
+.sc-star { animation: sc-twinkle 2.6s ease-in-out infinite; }
+.sc-bob { animation: sc-bob 3.2s ease-in-out infinite; }
+.sc-mouth { animation: sc-mouth 1.1s ease-in-out infinite; }
+.sc-page { animation: sc-page 2.4s ease-in-out infinite; }
+.sc-bubble { animation: sc-bubble 6s ease-in-out infinite; }
+.sc-dash { animation: sc-dash 2s linear infinite; }
+.sc-heart { animation: sc-heart 3.6s ease-out infinite; }
+.sc-wave { animation: sc-wave 0.9s ease-in-out infinite; }
+.sc-pulse { animation: sc-pulse 1.3s ease-in-out infinite; }
