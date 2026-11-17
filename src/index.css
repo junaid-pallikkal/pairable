@@ -124,3 +124,6 @@ body {
 .sc-heart { animation: sc-heart 3.6s ease-out infinite; }
 .sc-wave { animation: sc-wave 0.9s ease-in-out infinite; }
 .sc-pulse { animation: sc-pulse 1.3s ease-in-out infinite; }
+
+/* notification bell */
+@keyframes ring { 0%, 100% { transform: rotate(0); } 15% { transform: rotate(16deg); } 30% { transform: rotate(-14deg); } 45% { transform: rotate(10deg); } 60% { transform: rotate(-8deg); } 75% { transform: rotate(4deg); } }

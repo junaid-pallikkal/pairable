@@ -10,7 +10,6 @@ import { ForgotPassword, ResetPassword, SignIn, SignUp } from './pages/Auth'
 
 const Explore = lazy(() => import('./pages/Explore'))
 const Ask = lazy(() => import('./pages/Ask'))
-const Offer = lazy(() => import('./pages/Offer'))
 const CaseDetail = lazy(() => import('./pages/case/CaseDetail'))
 const Connections = lazy(() => import('./pages/Connections'))
 const Messages = lazy(() => import('./pages/Messages'))
@@ -56,7 +55,7 @@ export default function App() {
                   <Route index element={<Dashboard />} />
                   <Route path="welcome" element={<Onboarding />} />
                   <Route path="ask" element={<Ask />} />
-                  <Route path="offer" element={<Offer />} />
+                  <Route path="offer" element={<Navigate to="/app/settings" replace />} />
                   <Route path="browse" element={<Navigate to="/app/explore" replace />} />
                   <Route path="new" element={<Navigate to="/app/ask" replace />} />
                   <Route path="find" element={<Navigate to="/app/ask" replace />} />

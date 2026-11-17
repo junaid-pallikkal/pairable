@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router'
+
 import { BellRing, Pencil, Send } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth, useMe } from '../lib/auth'
@@ -10,6 +10,8 @@ import { Input } from '../components/forms'
 import { Mascot } from '../components/Mascot'
 import { MicButton } from '../components/MicButton'
 import { PersonCard } from '../components/MatchDeck'
+import { KeywordsEditor } from '../components/KeywordsEditor'
+import { MyMedia, PhotoUploader } from '../components/MediaParts'
 import { useToast } from '../components/Toast'
 
 const EXAMPLES = [
@@ -19,7 +21,7 @@ const EXAMPLES = [
 ]
 
 /** The helper writes what they can offer in plain words. Pip makes the profile and tells waiting seekers. */
-export default function Offer() {
+export default function Offer({ embedded = false }: { embedded?: boolean }) {
   const { profile } = useMe()
   const { refreshProfile } = useAuth()
   const toast = useToast()
@@ -77,7 +79,7 @@ export default function Offer() {
 
   if (!editing) {
     return (
-      <div className="mx-auto max-w-2xl">
+      <div className={embedded ? '' : 'mx-auto max-w-2xl'}>
         <div className="mb-6 flex items-end gap-4">
           <Mascot className="h-28 w-auto shrink-0" />
           <p className="mb-4 rounded-3xl rounded-bl-md bg-surface p-4 text-sm font-semibold shadow-card">
@@ -86,6 +88,13 @@ export default function Offer() {
         </div>
         <h1 className="mb-4 text-2xl font-bold">This is how people see you</h1>
         <PersonCard person={{ ...profile, availability_status: profile.availability_status }} className="mx-auto max-w-sm" />
+        <div className="mx-auto mt-8 max-w-sm space-y-6">
+          <KeywordsEditor />
+          <Card className="space-y-5">
+            <PhotoUploader />
+            <MyMedia title="Show your work" hint="Add photos, a short video or a document. People see them on your card." />
+          </Card>
+        </div>
         {matched === 0 && (
           <p className="mt-5 flex items-center justify-center gap-2 text-sm text-muted">
             <BellRing size={16} aria-hidden /> No one is waiting for this yet. You’ll get a notification when someone is.
@@ -102,7 +111,7 @@ export default function Offer() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className={embedded ? '' : 'mx-auto max-w-2xl'}>
       <div className="flex items-end gap-4">
         <Mascot className="h-36 w-auto shrink-0" />
         <div className="mb-6 rounded-3xl rounded-bl-md bg-surface p-5 shadow-card">
@@ -112,6 +121,7 @@ export default function Offer() {
       </div>
 
       <Card className="mt-4 space-y-4 !p-4">
+        <PhotoUploader />
         <label htmlFor="offer-text" className="sr-only">What you can offer</label>
         <div className="relative">
           <textarea
@@ -146,11 +156,7 @@ export default function Offer() {
           </button>
         ))}
       </div>
-      {has && (
-        <p className="mt-6 text-center text-sm">
-          <Link to="/app" className="font-semibold underline">Cancel</Link>
-        </p>
-      )}
+      
     </div>
   )
 }

@@ -39,7 +39,8 @@ insert into public.synonyms (word, adds) values
   ('garden','garden'), ('gardening','garden'), ('plants','garden'),
   ('music','music'), ('singing','music'), ('song','music'), ('songs','music'),
   ('dance','dance'), ('dancing','dance'),
-  ('maths','math'), ('math','math'), ('mathematics','math');
+  ('maths','math'), ('math','math'), ('mathematics','math'),
+  ('maram','tree'), ('maran','tree'), ('mara','tree'), ('marangal','tree');
 
 -- Replace each word by its concept (instead of adding extra words)
 create or replace function public.expand_text(p text) returns text
@@ -78,7 +79,7 @@ $$;
 
 create or replace function public.strong_match(n int, total int) returns boolean
 language sql immutable set search_path = '' as $$
-  select n >= 2 and (n >= 3 or n::numeric / greatest(total, 1) >= 0.34)
+  select n >= 2 and (n >= 3 or n::numeric / greatest(total, 1) >= 0.5)
 $$;
 
 create or replace function public.find_matches_for_case(p_case uuid) returns int

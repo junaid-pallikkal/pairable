@@ -5,31 +5,47 @@ import type { PersonLite } from '../lib/types'
 import { availabilityLabel, initials } from '../lib/format'
 import { Chip } from './ui'
 import { VerificationBadge } from './Safety'
+import { Facts } from './Facts'
+import { MediaGallery } from './MediaParts'
+import type { MediaItem } from '../lib/media'
 
 export interface DeckItem {
   matchId: string
   person: PersonLite
   hits: string[]
   explanation: string
+  media?: MediaItem[]
 }
 
 /** The face of one person, as a seeker sees it. Also used to preview a helper's own profile. */
-export function PersonCard({ person, hits, className = '' }: { person: PersonLite; hits?: string[]; className?: string }) {
+export function PersonCard({ person, hits, className = '', needText, media }: { person: PersonLite; hits?: string[]; className?: string; needText?: string; media?: MediaItem[] }) {
   const about = (person.offer_summary || person.offer_text || '').trim()
   return (
     <div className={`overflow-hidden rounded-[2rem] bg-surface shadow-float ${className}`}>
-      <div className="relative flex h-44 items-end bg-fg p-5 text-bg">
-        <div className="absolute -right-8 -top-10 h-40 w-40 rounded-full bg-accent/40 blur-3xl" aria-hidden />
-        <div className="absolute left-5 top-5 flex h-16 w-16 items-center justify-center rounded-full bg-accent text-2xl font-bold text-black ring-4 ring-white/20" aria-hidden>
-          {initials(person.display_name)}
+      {person.avatar_url ? (
+        <div className="relative h-80 bg-fg">
+          <img src={person.avatar_url} alt={`Photo of ${person.display_name}`} draggable={false} className="h-full w-full select-none object-cover" />
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-5 pt-16 text-white">
+            <h3 className="text-2xl font-bold leading-tight">{person.display_name}</h3>
+            {person.headline && <p className="mt-0.5 line-clamp-2 text-sm text-white/80">{person.headline}</p>}
+          </div>
         </div>
-        <div className="relative ml-auto text-right">
-          <h3 className="text-2xl font-bold leading-tight">{person.display_name}</h3>
-          {person.headline && <p className="mt-0.5 max-w-[16rem] text-sm text-white/70">{person.headline}</p>}
+      ) : (
+        <div className="relative flex h-44 items-end bg-fg p-5 text-bg">
+          <div className="absolute -right-8 -top-10 h-40 w-40 rounded-full bg-accent/40 blur-3xl" aria-hidden />
+          <div className="absolute left-5 top-5 flex h-16 w-16 items-center justify-center rounded-full bg-accent text-2xl font-bold text-black ring-4 ring-white/20" aria-hidden>
+            {initials(person.display_name)}
+          </div>
+          <div className="relative ml-auto text-right">
+            <h3 className="text-2xl font-bold leading-tight">{person.display_name}</h3>
+            {person.headline && <p className="mt-0.5 max-w-[16rem] text-sm text-white/70">{person.headline}</p>}
+          </div>
         </div>
-      </div>
+      )}
       <div className="space-y-4 p-5">
-        {about && <p className="line-clamp-5 text-sm leading-relaxed">{about}</p>}
+        {about && <p className="line-clamp-4 text-sm leading-relaxed">{about}</p>}
+        <Facts text={person.offer_text || person.offer_summary} need={needText} />
+        {media && media.length > 0 && <MediaGallery items={media.slice(0, 4)} size="sm" />}
         {hits && hits.length > 0 && (
           <div>
             <p className="mb-1.5 text-xs font-semibold text-muted">You both mention</p>
@@ -62,10 +78,12 @@ export function MatchDeck({
   items,
   onDecide,
   empty,
+  needText,
 }: {
   items: DeckItem[]
   onDecide: (item: DeckItem, choose: boolean) => Promise<boolean>
   empty: ReactNode
+  needText?: string
 }) {
   const reduced = useReducedMotion()
   const controls = useAnimationControls()
@@ -102,7 +120,7 @@ export function MatchDeck({
       }}
     >
       <div className="relative">
-        {next && <PersonCard person={next.person} hits={next.hits} className="absolute inset-x-3 top-3 scale-[0.96] opacity-70" />}
+        {next && <PersonCard person={next.person} hits={next.hits} needText={needText} className="absolute inset-x-3 top-3 scale-[0.96] opacity-70" />}
         <motion.div
           key={top.matchId}
           drag={busy ? false : 'x'}
@@ -115,7 +133,7 @@ export function MatchDeck({
           }}
           className="relative cursor-grab touch-pan-y active:cursor-grabbing"
         >
-          <PersonCard person={top.person} hits={top.hits} />
+          <PersonCard person={top.person} hits={top.hits} needText={needText} media={top.media} />
           <motion.span style={{ opacity: chooseOpacity }} className="pointer-events-none absolute left-5 top-5 -rotate-12 rounded-xl border-4 border-accent bg-fg/80 px-3 py-1 text-xl font-bold text-accent" aria-hidden>
             CHOOSE
           </motion.span>

@@ -402,5 +402,77 @@ if (!hasExplore) {
   for (const cid of [sp2.case_id, ph.case_id, st.case_id]) { await solver.rpc('close_case', { p_case:cid }); await seeker.rpc('close_case', { p_case:cid }) }
 }
 
+// ============================================================
+// Photos and files (needs supabase/media.sql applied)
+// ============================================================
+const hasMedia = !(await seeker.from('media').select('id').limit(1)).error
+if (!hasMedia) {
+  console.log('\nSKIP photo and file checks: run supabase/media.sql first')
+} else {
+  console.log('\n-- media: profile photo')
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
+  const up = await solver.storage.from('avatars').upload(V + '/e2e-' + Date.now() + '.png', png, { contentType:'image/png' })
+  ok('helper uploads a profile photo', !up.error, up.error?.message)
+  if (!up.error) {
+    const url = solver.storage.from('avatars').getPublicUrl(up.data.path).data.publicUrl
+    must('profile points at the photo', await solver.from('profiles').update({ avatar_url:url }).eq('id', V))
+    const got = await fetch(url)
+    ok('the photo can be opened by link', got.ok, 'status=' + got.status)
+    const eh = must('explore shows the photo', await seeker.rpc('explore_helpers', { p_query:'', p_sort:'new', p_limit:60 }))
+    ok('explore list includes avatar_url', eh?.find(h => h.id === V)?.avatar_url === url)
+    const people = must('a seeker can read the profile photo', await seeker.from('profiles').select('avatar_url').eq('id', V).single())
+    ok('seeker sees the helper photo', people?.avatar_url === url)
+    await solver.storage.from('avatars').remove([up.data.path])
+    await solver.from('profiles').update({ avatar_url:null }).eq('id', V)
+  }
+  const bad = await seeker.storage.from('avatars').upload(V + '/not-yours.png', png, { contentType:'image/png' })
+  ok("cannot upload into someone else's folder", !!bad.error, bad.error?.message)
+  const wrong = await solver.storage.from('avatars').upload(V + '/script.txt', Buffer.from('hello'), { contentType:'text/plain' })
+  ok('a text file is not allowed as a photo', !!wrong.error, wrong.error?.message)
+
+  console.log('-- media: files on a profile')
+  const added = []
+  for (let i = 0; i < 8; i++) {
+    const path = V + '/e2e-media-' + i + '-' + Date.now() + '.png'
+    const f = await solver.storage.from('media').upload(path, png, { contentType:'image/png' })
+    if (f.error) { ok('upload to media bucket', false, f.error.message); break }
+    const r = await solver.from('media').insert({ owner_id:V, kind:'profile', url:'https://example.invalid/' + path, path, file_type:'image', name:'e2e ' + i, size_bytes:png.length }).select('id,path').single()
+    if (r.error) { ok('add profile file ' + (i + 1), false, r.error.message); break }
+    added.push(r.data)
+  }
+  ok('a helper can add profile files (up to 8)', added.length >= 1, 'added ' + added.length)
+  const ninth = await solver.from('media').insert({ owner_id:V, kind:'profile', url:'https://example.invalid/x', path:V + '/x.png', file_type:'image', name:'ninth', size_bytes:1 })
+  ok('a ninth profile file is refused when 8 exist', added.length < 8 || !!ninth.error, ninth.error?.message)
+  const seen = must('another person reads the profile files', await seeker.from('media').select('id').eq('owner_id', V).eq('kind', 'profile'))
+  ok('profile files are visible to others', seen?.length >= added.length)
+  const steal = await seeker.from('media').delete().eq('id', added[0]?.id ?? '00000000-0000-0000-0000-000000000000').select()
+  ok('others cannot delete your files', !steal.error && steal.data.length === 0)
+  const fake = await seeker.from('media').insert({ owner_id:V, kind:'profile', url:'x', path:'x', file_type:'image', name:'fake' })
+  ok('cannot add a file in someone else name', !!fake.error)
+
+  console.log('-- media: files on a problem')
+  const pb = must('a public problem', await seeker.rpc('submit_problem', { p_text:'I need my old bicycle repaired, see the photo of the broken chain', p_public:true }))
+  const pPath = S + '/e2e-problem-' + Date.now() + '.png'
+  const pu = await seeker.storage.from('media').upload(pPath, png, { contentType:'image/png' })
+  ok('problem maker uploads a photo', !pu.error, pu.error?.message)
+  const pm = must('photo attached to the problem', await seeker.from('media').insert({ owner_id:S, kind:'problem', case_id:pb.case_id, url:'https://example.invalid/' + pPath, path:pPath, file_type:'image', name:'chain.png', size_bytes:png.length }).select('id').single())
+  const seenBy = must('a helper reads the public problem files', await solver.from('media').select('id').eq('case_id', pb.case_id))
+  ok('helpers can see files of a public problem', seenBy?.length === 1)
+  const notOwner = await solver.from('media').insert({ owner_id:V, kind:'problem', case_id:pb.case_id, url:'x', path:'x', file_type:'image', name:'nope' })
+  ok('only the owner can add files to a problem', !!notOwner.error)
+  const priv = must('a private problem', await seeker.rpc('submit_problem', { p_text:'Private job: please look at the attached plan of my house', p_public:false }))
+  const prPath = S + '/e2e-private-' + Date.now() + '.png'
+  await seeker.storage.from('media').upload(prPath, png, { contentType:'image/png' })
+  await seeker.from('media').insert({ owner_id:S, kind:'problem', case_id:priv.case_id, url:'https://example.invalid/' + prPath, path:prPath, file_type:'image', name:'plan.png', size_bytes:png.length })
+  const hidden = await solver.from('media').select('id').eq('case_id', priv.case_id)
+  ok('files of a private problem are hidden from others', !hidden.error && hidden.data.length === 0)
+
+  // clean up
+  for (const a of added) { await solver.from('media').delete().eq('id', a.id); await solver.storage.from('media').remove([a.path]) }
+  await seeker.from('media').delete().eq('case_id', pb.case_id); await seeker.from('media').delete().eq('case_id', priv.case_id)
+  await seeker.storage.from('media').remove([pPath, prPath])
+  for (const cid of [pb.case_id, priv.case_id]) await seeker.rpc('close_case', { p_case:cid })
+}
+
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED')
 process.exit(fails ? 1 : 0)

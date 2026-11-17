@@ -139,7 +139,21 @@ export function PageSpinner() {
   )
 }
 
-export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
+export function Avatar({ name, size = 40, src }: { name: string; size?: number; src?: string | null }) {
+  const [failed, setFailed] = useState(false)
+  if (src && !failed) {
+    return (
+      <img
+        src={src}
+        alt=""
+        aria-hidden
+        draggable={false}
+        onError={() => setFailed(true)}
+        style={{ width: size, height: size }}
+        className="shrink-0 select-none rounded-full object-cover"
+      />
+    )
+  }
   return (
     <span
       aria-hidden

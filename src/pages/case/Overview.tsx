@@ -11,6 +11,7 @@ import { Input, Select, Textarea } from '../../components/forms'
 import { Modal, ConfirmDialog } from '../../components/Modal'
 import { IMPORTANCE, SkillPicker, type SkillSel } from '../../components/SkillPicker'
 import { useToast } from '../../components/Toast'
+import { MyMedia } from '../../components/MediaParts'
 
 export function Overview({
   c,
@@ -69,6 +70,8 @@ export function Overview({
           </div>
         )}
       </Card>
+
+      <Card><MyMedia caseId={c.id} title="Photos, videos and documents" hint="Add something that shows the job. Anyone who can see this problem can open it." readOnly={!isOwner || !active} /></Card>
 
       {isParticipant && <ResolutionPanel c={c} isOwner={isOwner} onChanged={onChanged} />}
       {c.status === 'resolved' && isParticipant && <FeedbackPanel c={c} />}

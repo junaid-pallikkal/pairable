@@ -1,9 +1,10 @@
 import { BellRing, Bookmark, MapPin, Sparkles } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
-import { timeAgo, availabilityLabel, initials } from '../lib/format'
+import { timeAgo, availabilityLabel } from '../lib/format'
 import type { ExploreItem, HelperItem, ProblemItem } from '../lib/explore'
-import { Chip } from './ui'
+import { Avatar, Chip } from './ui'
 import { VerificationBadge } from './Safety'
+import { Facts } from './Facts'
 
 const DAY = 864e5
 const isNew = (iso: string | null) => !!iso && Date.now() - new Date(iso).getTime() < DAY
@@ -80,9 +81,7 @@ export function HelperCard({ item, index, saved, onToggleSave, onOpen, searching
   return (
     <Shell index={index} onOpen={onOpen} openLabel={`Open ${item.display_name}`}>
       <div className="pointer-events-none flex items-start gap-3">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-lg font-bold text-black" aria-hidden>
-          {initials(item.display_name)}
-        </span>
+        <Avatar name={item.display_name} src={item.avatar_url} size={48} />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-lg font-bold leading-tight">{item.display_name}</h2>
           {item.headline && <p className="line-clamp-2 text-sm text-muted">{item.headline}</p>}
@@ -90,6 +89,7 @@ export function HelperCard({ item, index, saved, onToggleSave, onOpen, searching
         <span className="pointer-events-auto -mr-2 -mt-2"><SaveButton saved={saved} onToggle={onToggleSave} label={item.display_name} /></span>
       </div>
       <p className="pointer-events-none line-clamp-3 text-sm">{item.about}</p>
+      <div className="pointer-events-none"><Facts text={item.about} compact /></div>
       <div className="pointer-events-none"><HitChips hits={item.hits} label={searching ? 'Mentions:' : 'Fits what you asked:'} /></div>
       <div className="pointer-events-none mt-auto flex flex-wrap items-center gap-2 pt-1 text-xs text-muted">
         {isNew(item.updated_at) && <Chip tone="success" icon={Sparkles}>New</Chip>}

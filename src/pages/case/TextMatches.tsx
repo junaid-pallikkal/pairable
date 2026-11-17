@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { BellRing } from 'lucide-react'
+import { BellRing, Loader2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { errorMessage, unwrap, useData } from '../../lib/data'
 import { fetchTextMatches } from '../../lib/textmatch'
@@ -18,6 +18,15 @@ export function TextMatches({ c, onChanged }: { c: Case; onChanged: () => void }
   useEffect(() => {
     if (q.data) setItems(q.data.items)
   }, [q.data])
+
+  // no matches yet: look again every few seconds
+  const waitingNow = !!q.data && q.data.rows.length === 0 && ['open', 'in_progress'].includes(c.status)
+  useEffect(() => {
+    if (!waitingNow) return
+    const t = setInterval(() => q.reload(), 8000)
+    return () => clearInterval(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waitingNow])
 
   async function decide(item: DeckItem, choose: boolean): Promise<boolean> {
     try {
@@ -41,6 +50,7 @@ export function TextMatches({ c, onChanged }: { c: Case; onChanged: () => void }
   return (
     <>
     <MatchDeck
+      needText={c.description}
       items={active ? items : []}
       onDecide={decide}
       empty={
@@ -58,6 +68,11 @@ export function TextMatches({ c, onChanged }: { c: Case; onChanged: () => void }
                 ? 'You will be notified when they reply.'
                 : 'If someone new matches later, I will notify you.'}
           </p>
+          {q.data.rows.length === 0 && active && (
+            <p role="status" className="flex items-center justify-center gap-2 text-sm font-semibold">
+              <Loader2 size={16} className="animate-spin" aria-hidden /> Still looking. I check again every few seconds.
+            </p>
+          )}
           <div className="flex justify-center gap-2">
             <ButtonLink to="/app/connections">My requests</ButtonLink>
             <Link to="/app/ask" className="inline-flex min-h-11 items-center px-3 text-sm font-semibold underline">Ask something else</Link>
@@ -65,7 +80,7 @@ export function TextMatches({ c, onChanged }: { c: Case; onChanged: () => void }
         </Card>
       }
     />
-    {active && <MatchList items={items} onChoose={(i) => decide(i, true)} />}
+    {active && <MatchList items={items} needText={c.description} onChoose={(i) => decide(i, true)} />}
     </>
   )
 }

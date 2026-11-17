@@ -18,6 +18,8 @@ export interface Profile {
   onboarded_at: string | null
   offer_text?: string | null
   offer_summary?: string | null
+  offer_keywords?: string[]
+  avatar_url?: string | null
   verification?: string
   is_demo?: boolean
 }
@@ -194,6 +196,7 @@ export interface PersonLite {
   city: string | null
   availability_status: Availability
   verification?: string
+  avatar_url?: string | null
   is_demo?: boolean
   offer_text?: string | null
   offer_summary?: string | null

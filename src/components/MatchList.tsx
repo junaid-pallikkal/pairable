@@ -1,18 +1,21 @@
 import { useMemo, useState } from 'react'
 import { Check, ChevronDown, MapPin, Search } from 'lucide-react'
 import { useAuth } from '../lib/auth'
-import { availabilityLabel, initials } from '../lib/format'
+import { availabilityLabel } from '../lib/format'
 import type { DeckItem } from './MatchDeck'
-import { Chip } from './ui'
+import { Avatar, Chip } from './ui'
+import { MediaGallery } from './MediaParts'
 import { VerificationBadge } from './Safety'
+import { Facts } from './Facts'
+import { parseFacts } from '../lib/facts'
 
-type Sort = 'best' | 'available' | 'name'
+type Sort = 'best' | 'price' | 'speed' | 'fit' | 'available' | 'name'
 
 /**
  * Everyone who matched, as a list you can search, filter and sort, then choose from.
  * It sits under the swipe cards so you can compare instead of going one by one.
  */
-export function MatchList({ items, onChoose }: { items: DeckItem[]; onChoose: (item: DeckItem) => Promise<boolean> }) {
+export function MatchList({ items, onChoose, needText }: { items: DeckItem[]; onChoose: (item: DeckItem) => Promise<boolean>; needText?: string }) {
   const { profile } = useAuth()
   const myCity = profile?.city?.trim().toLowerCase() || null
   const [term, setTerm] = useState('')
@@ -34,6 +37,12 @@ export function MatchList({ items, onChoose }: { items: DeckItem[]; onChoose: (i
       if (t && !(p.display_name + ' ' + (p.headline ?? '') + ' ' + (p.offer_text ?? '') + ' ' + i.hits.join(' ')).toLowerCase().includes(t)) return false
       return true
     })
+    const f = (i: DeckItem) => parseFacts(i.person.offer_text || i.person.offer_summary)
+    if (sort === 'price') list = [...list].sort((a, b) => (f(a).price?.amount ?? Infinity) - (f(b).price?.amount ?? Infinity))
+    if (sort === 'speed') list = [...list].sort((a, b) => {
+      const per = (i: DeckItem) => { const s = f(i).speed; return s ? (s.period === 'hour' ? s.amount * 8 : s.amount) : -1 }
+      return per(b) - per(a)
+    })
     if (sort === 'available') list = [...list].sort((a, b) => Number(b.person.availability_status === 'open') - Number(a.person.availability_status === 'open'))
     if (sort === 'name') list = [...list].sort((a, b) => a.person.display_name.localeCompare(b.person.display_name))
     return list
@@ -52,6 +61,8 @@ export function MatchList({ items, onChoose }: { items: DeckItem[]; onChoose: (i
   }
 
   if (items.length === 0) return null
+  const hasPrice = items.some((i) => parseFacts(i.person.offer_text || i.person.offer_summary).price)
+  const hasSpeed = items.some((i) => parseFacts(i.person.offer_text || i.person.offer_summary).speed)
 
   const toggle = (on: boolean, set: (v: boolean) => void, label: string) => (
     <button onClick={() => set(!on)} aria-pressed={on} className={`min-h-10 rounded-full px-4 text-sm font-semibold transition ${on ? 'bg-accent text-black' : 'bg-surface-2 hover:bg-accent-soft'}`}>
@@ -74,6 +85,8 @@ export function MatchList({ items, onChoose }: { items: DeckItem[]; onChoose: (i
           Sort
           <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className="min-h-11 rounded-2xl bg-surface-2 px-3 text-sm">
             <option value="best">Best match</option>
+            {hasPrice && <option value="price">Lowest price</option>}
+            {hasSpeed && <option value="speed">Fastest</option>}
             <option value="available">Available first</option>
             <option value="name">Name A to Z</option>
           </select>
@@ -93,7 +106,7 @@ export function MatchList({ items, onChoose }: { items: DeckItem[]; onChoose: (i
           return (
             <li key={i.matchId} className="rounded-3xl bg-surface p-4 shadow-card">
               <div className="flex items-start gap-3">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-lg font-bold text-black" aria-hidden>{initials(p.display_name)}</span>
+                <Avatar name={p.display_name} src={p.avatar_url} size={56} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-base font-bold">{p.display_name}</p>
                   {p.headline && <p className="line-clamp-2 text-sm text-muted">{p.headline}</p>}
@@ -103,6 +116,8 @@ export function MatchList({ items, onChoose }: { items: DeckItem[]; onChoose: (i
                     <VerificationBadge level={p.verification} />
                     {p.is_demo && <Chip tone="neutral">Demo</Chip>}
                   </div>
+                  <div className="mt-2"><Facts text={p.offer_text || p.offer_summary} need={needText} /></div>
+                  {i.media && i.media.length > 0 && <div className="mt-2"><MediaGallery items={i.media.slice(0, 4)} size="sm" /></div>}
                   {i.hits.length > 0 && (
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       <span className="text-xs font-semibold text-muted">You both mention:</span>

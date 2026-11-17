@@ -26,7 +26,7 @@ function useStart() {
     } catch {
       /* ignore */
     }
-    const target = path === 'seeker' ? '/app/ask' : '/app/offer'
+    const target = path === 'seeker' ? '/app/ask' : '/app/settings'
     if (session) return nav(target)
     let off = false
     try {
@@ -126,7 +126,7 @@ export default function Home() {
     <>
       {/* hero */}
       <section className="relative overflow-hidden">
-        <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 pb-12 pt-10 md:grid-cols-[1.05fr_1fr] md:pb-20 md:pt-16">
+        <div className="mx-auto grid max-w-6xl items-center gap-4 px-4 pb-12 pt-4 md:grid-cols-[1.05fr_1fr] md:gap-8 md:pb-20 md:pt-16">
           <div className="relative z-10">
             <h1 className="text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl md:text-6xl">
               Someone out there needs{' '}
@@ -145,8 +145,8 @@ export default function Home() {
               <TalkCard path="solver" start={start} busy={busy} />
             </div>
           </div>
-          <div className="relative">
-            <StoryScene className="mx-auto h-auto w-full max-w-xl" />
+          <div className="relative order-first md:order-none">
+            <StoryScene className="mx-auto h-auto w-full max-w-[22rem] md:max-w-xl" />
           </div>
         </div>
       </section>

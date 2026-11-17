@@ -7,9 +7,11 @@ import { errorMessage, unwrap, useData } from '../lib/data'
 import type { Availability, Intent } from '../lib/types'
 import { Button, Card, ListSkeleton, PageHeader, PageSpinner } from '../components/ui'
 import { Checkbox, Input, Select, Textarea } from '../components/forms'
-import { PROFICIENCY, SkillPicker, type SkillSel } from '../components/SkillPicker'
+import type { SkillSel } from '../components/SkillPicker'
 import { useToast } from '../components/Toast'
 import { BlockedList, VerificationCard } from '../components/AccountSafety'
+import { PhotoUploader } from '../components/MediaParts'
+import Offer from './Offer'
 
 interface UserSkillRow {
   skill_id: string
@@ -89,6 +91,10 @@ function ProfileEditor({ initialIntent, onboarding }: { initialIntent?: Intent; 
         )
         if (r2.error) throw r2.error
       }
+      if (skills.length) {
+        const merged = [...new Set([...(profile.offer_keywords ?? []), ...skills.map((s) => s.name.toLowerCase())])].slice(0, 20)
+        await supabase.from('profiles').update({ offer_keywords: merged }).eq('id', id)
+      }
       await refreshProfile()
       toast.success(onboarding ? 'You are all set.' : 'Saved.')
       if (onboarding) nav(intent === 'solver' ? '/app/explore' : '/app/new', { replace: true })
@@ -125,10 +131,6 @@ function ProfileEditor({ initialIntent, onboarding }: { initialIntent?: Intent; 
             <option value="limited">Limited</option>
             <option value="unavailable">Not available</option>
           </Select>
-          <div>
-            <SkillPicker value={skills} onChange={setSkills} levels={PROFICIENCY} withYears label="Your skills" />
-            {errors.skills && <p className="mt-1.5 text-sm text-danger">{errors.skills}</p>}
-          </div>
         </>
       )}
       <Checkbox label="Let people find me" checked={discoverable} onChange={(e) => setDiscoverable(e.target.checked)} />
@@ -163,7 +165,7 @@ export function Onboarding() {
         /* ignore */
       }
       await refreshProfile()
-      nav(intent === 'solver' ? '/app/offer' : intent === 'seeker' ? '/app/ask' : '/app', { replace: true })
+      nav(intent === 'solver' ? '/app/settings' : intent === 'seeker' ? '/app/ask' : '/app', { replace: true })
     } catch (e) {
       toast.error(errorMessage(e))
       setBusy(null)
@@ -219,15 +221,36 @@ export function Onboarding() {
 }
 
 export function Settings() {
+  const { profile } = useMe()
+  const [help, setHelp] = useState(false)
+  const helper = profile.intent !== 'seeker' || help
   return (
-    <div className="max-w-xl">
-      <PageHeader title="Settings" />
-      <Card>
-        <ProfileEditor />
-      </Card>
-      <div className="mt-6 space-y-6">
-        <VerificationCard />
-        <BlockedList />
+    <div className="max-w-3xl">
+      <PageHeader title="Profile" />
+      <div className="space-y-10">
+        {helper ? (
+          <section aria-label="What I offer">
+            <h2 className="mb-4 text-xl font-bold">What I offer</h2>
+            <Offer embedded />
+          </section>
+        ) : (
+          <Card className="space-y-5">
+            <PhotoUploader />
+            <div className="rounded-2xl bg-accent-soft p-4">
+              <p className="font-semibold">Want to help other people too?</p>
+              <p className="text-sm text-muted">Tell Pip what you can offer, and people who need it will find you.</p>
+              <Button className="mt-3" onClick={() => setHelp(true)}>I can help too</Button>
+            </div>
+          </Card>
+        )}
+        <section>
+          <h2 className="mb-4 text-xl font-bold">Your details</h2>
+          <Card className="max-w-xl"><ProfileEditor /></Card>
+        </section>
+        <div className="max-w-xl space-y-6">
+          <VerificationCard />
+          <BlockedList />
+        </div>
       </div>
     </div>
   )

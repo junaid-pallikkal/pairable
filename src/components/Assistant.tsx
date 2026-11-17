@@ -4,13 +4,14 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { AiLimit, AiUnavailable, askAssistant, understand, type ChatMsg } from '../lib/ai'
 import { errorMessage, unwrap } from '../lib/data'
-import { availabilityLabel, initials } from '../lib/format'
+import { availabilityLabel } from '../lib/format'
 import { loadHelpers, type HelperItem } from '../lib/explore'
 import { continueAsGuest, GUEST_MESSAGE } from '../lib/guest'
 import { answerLocal, looksLikeNeed } from '../lib/knowledge'
 import { BotHead } from './Mascot'
+import { Facts } from './Facts'
 import { MicButton } from './MicButton'
-import { Button } from './ui'
+import { Avatar, Button } from './ui'
 
 const BUBBLE_KEY = 'solvia_bubble_seen'
 
@@ -82,12 +83,13 @@ function HelperPick({ need, items, onSent }: { need: string; items: HelperItem[]
         {shown.map((h) => (
           <li key={h.id} className="rounded-2xl border border-line bg-surface p-3">
             <div className="flex items-start gap-2.5">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold text-black" aria-hidden>{initials(h.display_name)}</span>
+              <Avatar name={h.display_name} src={h.avatar_url} size={40} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold">{h.display_name}</p>
                 {h.headline && <p className="line-clamp-2 text-xs text-muted">{h.headline}</p>}
               </div>
             </div>
+            <div className="mt-2"><Facts text={h.about} need={need} /></div>
             {h.hits.length > 0 && (
               <div className="mt-2 flex flex-wrap items-center gap-1">
                 <span className="text-[11px] font-semibold text-muted">Matches:</span>
@@ -115,7 +117,7 @@ function HelperPick({ need, items, onSent }: { need: string; items: HelperItem[]
 }
 
 /** Floating helper at the bottom right. It always answers, and everything happens inside the chat. */
-export function Assistant() {
+export function Assistant({ raised = false }: { raised?: boolean }) {
   const { session } = useAuth()
   const [open, setOpen] = useState(false)
   const [bubble, setBubble] = useState(false)
@@ -281,7 +283,7 @@ export function Assistant() {
   }
 
   return (
-    <div className="fixed bottom-24 right-4 z-40 md:bottom-6 md:right-6">
+    <div className={`fixed right-4 z-40 md:bottom-6 md:right-6 ${raised ? 'bottom-24' : 'bottom-4'}`}>
       {open && (
         <section
           aria-label="Pip, the RePair assistant"

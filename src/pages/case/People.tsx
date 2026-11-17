@@ -23,7 +23,7 @@ export function People({
       {connections.map((c) => (
         <li key={c.id}>
           <Card className="flex items-center gap-3">
-            <Avatar name={c.other?.display_name ?? '?'} />
+            <Avatar name={c.other?.display_name ?? '?'} src={c.other?.avatar_url} />
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">{c.other?.display_name ?? 'Someone'}</p>
               {c.other?.headline && <p className="truncate text-xs text-muted">{c.other.headline}</p>}

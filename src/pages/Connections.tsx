@@ -88,7 +88,7 @@ export default function Connections() {
               <li key={c.id}>
                 <Card className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <Avatar name={c.other?.display_name ?? '?'} />
+                    <Avatar name={c.other?.display_name ?? '?'} src={c.other?.avatar_url} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold">{c.other?.display_name ?? 'Someone'}</p>
                       <Link to={`/app/cases/${c.case_id}`} className="block truncate text-sm font-semibold underline">

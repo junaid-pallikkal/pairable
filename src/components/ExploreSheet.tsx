@@ -5,11 +5,14 @@ import { BellRing, Bookmark, CheckCheck, ChevronLeft, ChevronRight, MapPin, Send
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { errorMessage, unwrap } from '../lib/data'
-import { availabilityLabel, initials, timeAgo } from '../lib/format'
+import { availabilityLabel, timeAgo } from '../lib/format'
 import type { ExploreItem } from '../lib/explore'
 import { BotHead } from './Mascot'
+import { Facts } from './Facts'
 import { MicButton } from './MicButton'
-import { Button, ButtonLink, Chip } from './ui'
+import { Avatar, Button, ButtonLink, Chip } from './ui'
+import { MediaGallery } from './MediaParts'
+import { loadCaseMedia, loadProfileMedia, type MediaItem } from '../lib/media'
 import { ReportButton, VerificationBadge } from './Safety'
 import { continueAsGuest, GUEST_MESSAGE } from '../lib/guest'
 
@@ -170,10 +173,22 @@ export function ExploreSheet({
   const item = items[index]
   const closeRef = useRef<HTMLButtonElement>(null)
   const [tick, setTick] = useState(0)
+  const [files, setFiles] = useState<MediaItem[]>([])
   useEffect(() => {
     closeRef.current?.focus()
   }, [])
   useEffect(() => setTick((t) => t + 1), [item?.key])
+  // photos, videos and documents that came with this problem or profile
+  useEffect(() => {
+    let alive = true
+    setFiles([])
+    if (!item) return
+    const run = item.type === 'problem' ? loadCaseMedia(item.id) : loadProfileMedia([item.id]).then((m) => m.get(item.id) ?? [])
+    run.then((list) => alive && setFiles(list)).catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [item?.key])
   if (!item) return null
   const isSaved = saved.has(item.key)
 
@@ -220,12 +235,13 @@ export function ExploreSheet({
                 </div>
               )}
               <p className="mt-5 whitespace-pre-wrap text-[15px] leading-relaxed">{item.description}</p>
+              {files.length > 0 && <div className="mt-4 space-y-2"><p className="text-xs font-semibold text-muted">Shared with this problem</p><MediaGallery items={files} /></div>}
               <p className="mt-5 rounded-2xl bg-surface-2 p-3 text-xs text-muted">The person’s name stays hidden until they accept your offer.</p>
             </>
           ) : (
             <>
               <div className="flex items-center gap-4">
-                <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-accent text-2xl font-bold text-black" aria-hidden>{initials(item.display_name)}</span>
+                <Avatar name={item.display_name} src={item.avatar_url} size={72} />
                 <div className="min-w-0">
                   <h2 className="text-2xl font-bold leading-tight">{item.display_name}</h2>
                   {item.headline && <p className="text-sm text-muted">{item.headline}</p>}
@@ -245,6 +261,8 @@ export function ExploreSheet({
                 </div>
               )}
               <p className="mt-5 whitespace-pre-wrap text-[15px] leading-relaxed">{item.about}</p>
+              <div className="mt-4"><Facts text={item.about} /></div>
+              {files.length > 0 && <div className="mt-4 space-y-2"><p className="text-xs font-semibold text-muted">Their work</p><MediaGallery items={files} /></div>}
             </>
           )}
           <div className="mt-6"><ReportButton type={item.type === 'problem' ? 'case' : 'user'} id={item.id} /></div>

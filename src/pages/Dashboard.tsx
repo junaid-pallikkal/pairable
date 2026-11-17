@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { BellRing, Check, Heart, MessageCircleQuestion, Plus, Sparkles, Trash2, X } from 'lucide-react'
+import { BellRing, Check, Heart, MessageCircleQuestion, Plus, Search, Sparkles, Trash2, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useMe } from '../lib/auth'
 import { errorMessage, unwrap, useData } from '../lib/data'
@@ -47,10 +47,18 @@ function caseState(c: Case, undecided: number, conns: ConnectionView[]): { chip:
   return { chip: <CaseStatusChip status={c.status} /> }
 }
 
+type Filter = 'all' | 'active' | 'ready' | 'waiting' | 'done'
+const ACTIVE = ['open', 'in_progress', 'resolution_proposed']
+
+/** All your problems in one place: filter them, open them, close them, delete drafts. */
 function SeekerView() {
   const { id } = useMe()
   const toast = useToast()
   const [del, setDel] = useState<Case | null>(null)
+  const [closing, setClosing] = useState<Case | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [filter, setFilter] = useState<Filter>('all')
+  const [term, setTerm] = useState('')
   const cases = useData(
     async () => unwrap(await supabase.from('cases').select('*').eq('owner_id', id).order('created_at', { ascending: false })) as (Case & { kind?: string })[],
     [id],
@@ -61,60 +69,135 @@ function SeekerView() {
   )
   const conns = useData(() => fetchConnections(id), [id])
 
+  function reloadAll() {
+    cases.reload()
+    decisions.reload()
+    conns.reload()
+  }
   async function remove() {
     if (!del) return
+    setBusy(true)
     try {
       unwrap(await supabase.from('cases').delete().eq('id', del.id))
       toast.success('Deleted.')
       setDel(null)
-      cases.reload()
+      reloadAll()
     } catch (e) {
       toast.error(errorMessage(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+  async function close() {
+    if (!closing) return
+    setBusy(true)
+    try {
+      unwrap(await supabase.rpc('close_case', { p_case: closing.id }))
+      toast.success('Problem closed.')
+      setClosing(null)
+      reloadAll()
+    } catch (e) {
+      toast.error(errorMessage(e))
+    } finally {
+      setBusy(false)
     }
   }
 
   const loading = cases.loading || decisions.loading || conns.loading
   const err = cases.error || decisions.error || conns.error
-  const undecidedFor = (cid: string) => (decisions.data ?? []).filter((d) => d.case_id === cid && !d.decision).length
+  const all = (cases.data ?? []).filter((c) => c.kind !== 'chat')
+  const rows = decisions.data ?? []
+  const undecidedFor = (cid: string) => rows.filter((r) => r.case_id === cid && !r.decision).length
+  const hasMatches = (cid: string) => rows.some((r) => r.case_id === cid)
+  const hasConn = (cid: string) => (conns.data ?? []).some((x) => x.case_id === cid && ['pending', 'clarification_requested', 'accepted'].includes(x.status))
+  const isReady = (c: Case) => c.status === 'open' && undecidedFor(c.id) > 0
+  const isWaiting = (c: Case) => c.status === 'open' && !hasMatches(c.id) && !hasConn(c.id)
+
+  const counts: Record<Filter, number> = {
+    all: all.length,
+    active: all.filter((c) => ACTIVE.includes(c.status)).length,
+    ready: all.filter(isReady).length,
+    waiting: all.filter(isWaiting).length,
+    done: all.filter((c) => c.status === 'resolved' || c.status === 'closed').length,
+  }
+  const shown = all.filter((c) => {
+    if (filter === 'active' && !ACTIVE.includes(c.status)) return false
+    if (filter === 'ready' && !isReady(c)) return false
+    if (filter === 'waiting' && !isWaiting(c)) return false
+    if (filter === 'done' && c.status !== 'resolved' && c.status !== 'closed') return false
+    return !term.trim() || c.title.toLowerCase().includes(term.trim().toLowerCase())
+  })
 
   if (loading) return <ListSkeleton />
-  if (err) return <ErrorState message={err} onRetry={() => { cases.reload(); decisions.reload(); conns.reload() }} />
-  if (cases.data!.length === 0)
+  if (err) return <ErrorState message={err} onRetry={reloadAll} />
+  if (all.length === 0)
     return (
-      <EmptyState
-        icon={Sparkles}
-        title="Tell Pip what you need and I’ll find the right person."
-        action={<ButtonLink to="/app/ask">Tell Pip</ButtonLink>}
-      />
+      <EmptyState icon={Sparkles} title="Tell Pip what you need and I’ll find the right person." action={<ButtonLink to="/app/ask">Tell Pip</ButtonLink>} />
     )
 
-  const ready = cases.data!.reduce((n, c) => n + (c.status === 'open' ? undecidedFor(c.id) : 0), 0)
+  const tabs: { id: Filter; label: string }[] = [
+    { id: 'all', label: 'All' },
+    { id: 'active', label: 'In progress' },
+    { id: 'ready', label: 'Matches ready' },
+    { id: 'waiting', label: 'Waiting' },
+    { id: 'done', label: 'Finished' },
+  ]
+
   return (
-    <div className="space-y-6">
-      {ready > 0 && (
-        <Card className="flex flex-wrap items-center justify-between gap-3 !bg-accent">
-          <p className="font-bold text-black">{ready} possible {ready === 1 ? 'match is' : 'matches are'} waiting for you.</p>
-        </Card>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Show problems">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setFilter(t.id)}
+            aria-pressed={filter === t.id}
+            className={`min-h-10 rounded-full px-4 text-sm font-semibold transition ${filter === t.id ? 'bg-fg text-bg' : 'bg-surface-2 hover:bg-accent-soft'}`}
+          >
+            {t.label} <span className={`ml-1 rounded-full px-2 py-0.5 text-xs ${filter === t.id ? 'bg-accent text-black' : 'bg-surface'}`}>{counts[t.id]}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="relative max-w-md">
+        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" aria-hidden />
+        <label htmlFor="dash-search" className="sr-only">Search your problems</label>
+        <input id="dash-search" value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Search your problems" className="min-h-11 w-full rounded-2xl bg-surface-2 pl-10 pr-4 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-fg" />
+      </div>
+
+      {counts.ready > 0 && filter !== 'ready' && (
+        <button onClick={() => setFilter('ready')} className="flex w-full items-center justify-between gap-3 rounded-2xl bg-accent px-5 py-3 text-left text-black">
+          <span className="font-bold">{counts.ready} {counts.ready === 1 ? 'problem has' : 'problems have'} matches waiting for you</span>
+          <span className="text-sm font-semibold underline">Show</span>
+        </button>
       )}
-      <ul className="space-y-3">
-        {cases.data!.map((c) => {
-          const s = caseState(c, undecidedFor(c.id), conns.data ?? [])
-          return (
-            <li key={c.id}>
-              <Card className="flex flex-wrap items-center gap-3 transition duration-200 hover:-translate-y-0.5 hover:shadow-float">
-                <Link to={`/app/cases/${c.id}`} className="min-w-0 flex-1 basis-48">
-                  <p className="line-clamp-2 font-semibold">{c.title}</p>
-                  <p className="text-xs text-muted">{timeAgo(c.created_at)}</p>
-                </Link>
-                {s.chip}
-                {s.action && <ButtonLink to={s.action.to} className="!min-h-10">{s.action.label}</ButtonLink>}
-                {c.status === 'draft' && <IconButton icon={Trash2} label="Delete" onClick={() => setDel(c)} />}
-              </Card>
-            </li>
-          )
-        })}
-      </ul>
-      <ConfirmDialog open={!!del} title={`Delete “${del?.title}”?`} onConfirm={remove} onClose={() => setDel(null)} />
+
+      {shown.length === 0 ? (
+        <EmptyState title="No problems here" action={<Button variant="secondary" onClick={() => { setFilter('all'); setTerm('') }}>Show everything</Button>} />
+      ) : (
+        <ul className="space-y-3">
+          {shown.map((c) => {
+            const s = caseState(c, undecidedFor(c.id), conns.data ?? [])
+            const active = ACTIVE.includes(c.status)
+            return (
+              <li key={c.id}>
+                <Card className="flex flex-wrap items-center gap-3 transition duration-200 hover:-translate-y-0.5 hover:shadow-float">
+                  <Link to={`/app/cases/${c.id}`} className="min-w-0 flex-1 basis-48">
+                    <p className="line-clamp-2 font-semibold">{c.title}</p>
+                    <p className="text-xs text-muted">{timeAgo(c.created_at)}</p>
+                  </Link>
+                  {s.chip}
+                  {s.action && <ButtonLink to={s.action.to} className="!min-h-10">{s.action.label}</ButtonLink>}
+                  <ButtonLink to={`/app/cases/${c.id}`} variant="secondary" className="!min-h-10">Open</ButtonLink>
+                  {active && <IconButton icon={X} label="Close this problem" onClick={() => setClosing(c)} />}
+                  {c.status === 'draft' && <IconButton icon={Trash2} label="Delete" onClick={() => setDel(c)} />}
+                </Card>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+      <ConfirmDialog open={!!closing} title={`Close “${closing?.title}”? People will stop seeing it.`} confirmLabel="Close problem" loading={busy} onConfirm={close} onClose={() => setClosing(null)} />
+      <ConfirmDialog open={!!del} title={`Delete “${del?.title}”?`} loading={busy} onConfirm={remove} onClose={() => setDel(null)} />
     </div>
   )
 }
@@ -234,13 +317,13 @@ function HelperView() {
         {profile.offer_text ? (
           <>
             <PersonCard person={profile} />
-            <Link to="/app/offer" className="mt-4 inline-block text-sm font-semibold underline">Change what I offer</Link>
+            <Link to="/app/settings" className="mt-4 inline-block text-sm font-semibold underline">Change what I offer</Link>
           </>
         ) : (
           <Card className="space-y-3 !bg-accent-soft">
             <p className="font-semibold">You don’t have a profile yet.</p>
             <p className="text-sm text-muted">Tell Pip what you can offer. It takes one message.</p>
-            <ButtonLink to="/app/offer">Tell Pip about me</ButtonLink>
+            <ButtonLink to="/app/settings">Tell Pip about me</ButtonLink>
           </Card>
         )}
       </aside>
@@ -263,7 +346,7 @@ export function Dashboard() {
           hello={first}
           line={profile.offer_text ? 'Your profile is live. Here is what needs you.' : 'Tell Pip what you can offer and people will find you.'}
           cta={profile.offer_text ? 'Find problems to help with' : 'Create my profile'}
-          to={profile.offer_text ? '/app/explore' : '/app/offer'}
+          to={profile.offer_text ? '/app/explore' : '/app/settings'}
         />
       )}
       {profile.intent === 'both' && (

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { ArrowRight, BellRing, Send } from 'lucide-react'
+import { ArrowRight, BellRing, Loader2, Send } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { errorMessage, unwrap } from '../lib/data'
 import { understand } from '../lib/ai'
@@ -11,6 +11,9 @@ import { Mascot } from '../components/Mascot'
 import { MicButton } from '../components/MicButton'
 import { MatchingScene } from '../components/MatchingScene'
 import { MatchDeck, type DeckItem } from '../components/MatchDeck'
+import { PendingFiles } from '../components/MediaParts'
+import { addMedia } from '../lib/media'
+import { useAuth } from '../lib/auth'
 import { MatchList } from '../components/MatchList'
 import { useToast } from '../components/Toast'
 
@@ -25,6 +28,8 @@ type Phase = 'compose' | 'thinking' | 'found' | 'deck' | 'waiting'
 /** The seeker talks to Pip in plain words. No forms, no categories. */
 export default function Ask() {
   const toast = useToast()
+  const { session } = useAuth()
+  const [files, setFiles] = useState<File[]>([])
   const [text, setText] = useState('')
   const [isPublic, setPublic] = useState(true)
   const [phase, setPhase] = useState<Phase>('compose')
@@ -48,6 +53,19 @@ export default function Ask() {
         await supabase.rpc('submit_problem', { p_text: t, p_title: u.title, p_summary: u.summary, p_keywords: u.keywords, p_public: isPublic }),
       ) as { case_id: string; matches: number }
       setCaseId(res.case_id)
+      // photos, videos or documents the person added to explain the problem
+      if (files.length && session) {
+        let failed = 0
+        for (const f of files) {
+          try {
+            await addMedia(session.user.id, res.case_id, f)
+          } catch {
+            failed++
+          }
+        }
+        setFiles([])
+        if (failed) toast.error(failed === files.length ? "Your files couldn't be added." : 'Some files could not be added.')
+      }
       setCount(res.matches)
       if (res.matches > 0) {
         const { items: found } = await fetchTextMatches(res.case_id)
@@ -83,6 +101,30 @@ export default function Ask() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Nobody yet: keep looking, and show the cards the moment someone matches
+  useEffect(() => {
+    if (phase !== 'waiting' || !caseId) return
+    let alive = true
+    const t = setInterval(async () => {
+      try {
+        const { items: found } = await fetchTextMatches(caseId)
+        if (!alive || found.length === 0) return
+        setItems(found)
+        setCount(found.length)
+        setWords([...new Set(found.flatMap((i) => i.hits))].slice(0, 6))
+        setPhase('deck')
+        toast.success('A match just arrived!')
+      } catch {
+        /* keep waiting */
+      }
+    }, 8000)
+    return () => {
+      alive = false
+      clearInterval(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, caseId])
 
   async function decide(item: DeckItem, choose: boolean): Promise<boolean> {
     try {
@@ -136,6 +178,7 @@ export default function Ask() {
               </div>
             </div>
             {err && <p className="text-sm font-semibold">{err}</p>}
+            <PendingFiles files={files} onChange={setFiles} />
             <div className="flex flex-wrap items-center justify-between gap-3">
               <Checkbox label="Let helpers see this (without my name)" checked={isPublic} onChange={(e) => setPublic(e.target.checked)} />
               <Button onClick={() => submit()} className="!min-h-12 !px-6">
@@ -183,6 +226,7 @@ export default function Ask() {
           </div>
           <MatchDeck
             items={items}
+            needText={sent}
             onDecide={decide}
             empty={
               <Card className="space-y-4 text-center">
@@ -199,7 +243,7 @@ export default function Ask() {
               </Card>
             }
           />
-          <MatchList items={items} onChoose={(i) => decide(i, true)} />
+          <MatchList items={items} needText={sent} onChoose={(i) => decide(i, true)} />
         </div>
       )}
 
@@ -211,6 +255,9 @@ export default function Ask() {
           <h2 className="text-2xl font-bold">I’ve saved your problem.</h2>
           <p className="mx-auto max-w-sm text-muted">
             Nobody fits yet. The moment someone with the right help joins, I’ll send you a notification with the match.
+          </p>
+          <p role="status" className="flex items-center justify-center gap-2 text-sm font-semibold">
+            <Loader2 size={16} className="animate-spin" aria-hidden /> Still looking. I check again every few seconds.
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             <ButtonLink to="/app">Go to my dashboard</ButtonLink>

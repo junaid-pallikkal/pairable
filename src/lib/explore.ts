@@ -45,6 +45,7 @@ export interface HelperItem {
   updated_at: string | null
   hits: string[]
   fits: boolean
+  avatar_url?: string | null
 }
 
 export type ExploreItem = ProblemItem | HelperItem

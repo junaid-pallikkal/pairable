@@ -10,8 +10,8 @@ import {
   Settings,
   Shield,
   Sparkles,
-  User,
   Users,
+  X,
   type LucideIcon,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -155,12 +155,11 @@ type NavItem = { to: string; label: string; icon: LucideIcon; end?: boolean }
 const N = {
   home: { to: '/app', label: 'Dashboard', icon: Home, end: true },
   ask: { to: '/app/ask', label: 'Ask Pip', icon: Sparkles },
-  offer: { to: '/app/offer', label: 'My profile', icon: User },
   explore: { to: '/app/explore', label: 'Explore', icon: Compass },
   connections: { to: '/app/connections', label: 'Connections', icon: Users },
   messages: { to: '/app/messages', label: 'Messages', icon: MessageSquare },
   resources: { to: '/app/resources', label: 'Resources', icon: Package },
-  settings: { to: '/app/settings', label: 'Settings', icon: Settings },
+  settings: { to: '/app/settings', label: 'Profile', icon: Settings },
 } satisfies Record<string, NavItem>
 const ADMIN_ITEM: NavItem = { to: '/app/admin', label: 'Admin', icon: Shield, end: false }
 
@@ -170,38 +169,109 @@ function navFor(intent: string | undefined, admin: boolean): NavItem[] {
     intent === 'seeker'
       ? [N.home, N.explore, N.ask, N.connections, N.messages, N.resources, N.settings]
       : intent === 'solver'
-        ? [N.home, N.explore, N.offer, N.connections, N.messages, N.resources, N.settings]
-        : [N.home, N.explore, N.ask, N.offer, N.connections, N.messages, N.resources, N.settings]
+        ? [N.home, N.explore, N.connections, N.messages, N.resources, N.settings]
+        : [N.home, N.explore, N.ask, N.connections, N.messages, N.resources, N.settings]
   return admin ? [...base, ADMIN_ITEM] : base
 }
 function mobileFor(intent: string | undefined): NavItem[] {
-  const main = intent === 'solver' ? N.offer : N.ask
+  const main = intent === 'solver' ? N.connections : N.ask
   return [N.home, N.explore, main, N.messages, N.settings]
 }
 
+interface Fresh {
+  id: string
+  title: string
+  link: string | null
+  /** true for the one-time "you have N unread" summary when you arrive */
+  summary?: boolean
+}
+
+const SEEN_KEY = 'repair_notified'
+function seen(id: string): boolean {
+  try {
+    const list = JSON.parse(sessionStorage.getItem(SEEN_KEY) ?? '[]') as string[]
+    if (list.includes(id)) return true
+    sessionStorage.setItem(SEEN_KEY, JSON.stringify([...list.slice(-50), id]))
+  } catch {
+    /* ignore */
+  }
+  return false
+}
+
+/** Unread count, plus each new notification delivered once so it can be shown clearly. */
 function useUnread(uid: string | undefined) {
   const [n, setN] = useState(0)
+  const [fresh, setFresh] = useState<Fresh | null>(null)
   useEffect(() => {
     if (!uid) return
     let alive = true
+    let first = true
     const load = async () => {
       const { count } = await supabase
         .from('notifications')
         .select('id', { count: 'exact', head: true })
         .is('read_at', null)
-      if (alive) setN(count ?? 0)
+      if (!alive) return
+      setN(count ?? 0)
+      // arriving with unread notifications: say so once per visit
+      if (first && (count ?? 0) > 0 && !seen('summary-' + uid)) {
+        setFresh({ id: 'summary', title: `You have ${count} unread ${count === 1 ? 'notification' : 'notifications'}`, link: '/app/notifications', summary: true })
+      }
+      first = false
     }
     load()
     const ch = supabase
       .channel('unread-' + uid)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` }, load)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` }, (p) => {
+        const row = p.new as { id: string; title: string; link: string | null }
+        if (row?.id && !seen(row.id)) setFresh({ id: row.id, title: row.title, link: row.link })
+      })
       .subscribe()
     return () => {
       alive = false
       supabase.removeChannel(ch)
     }
   }, [uid])
-  return n
+  return { n, fresh, clear: () => setFresh(null) }
+}
+
+/** One clear pop-up per new notification. It shows once, can be clicked or dismissed, and goes away by itself. */
+function NotificationPopup({ fresh, onClose }: { fresh: Fresh | null; onClose: () => void }) {
+  const nav = useNavigate()
+  useEffect(() => {
+    if (!fresh) return
+    const t = setTimeout(onClose, 9000)
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    document.addEventListener('keydown', onKey)
+    return () => {
+      clearTimeout(t)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [fresh, onClose])
+  if (!fresh) return null
+  return (
+    <div role="alert" aria-live="assertive" className="pointer-events-none fixed inset-x-0 top-3 z-[70] flex justify-center px-3 md:inset-x-auto md:right-6 md:top-5 md:justify-end">
+      <div className="pointer-events-auto flex w-full max-w-sm animate-[pop-in_0.25s_ease-out] items-center gap-3 rounded-3xl bg-fg p-3 pr-2 text-bg shadow-float ring-2 ring-accent">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-black">
+          <Bell size={20} className="animate-[ring_0.9s_ease-in-out_2]" aria-hidden />
+        </span>
+        <button
+          onClick={() => {
+            onClose()
+            nav(fresh.link ?? '/app/notifications')
+          }}
+          className="min-w-0 flex-1 text-left"
+        >
+          <span className="block text-xs font-semibold text-accent">{fresh.summary ? 'While you were away' : 'New notification'}</span>
+          <span className="line-clamp-2 text-sm font-semibold">{fresh.title}</span>
+        </button>
+        <button onClick={onClose} aria-label="Dismiss notification" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-white/10">
+          <X size={16} aria-hidden />
+        </button>
+      </div>
+    </div>
+  )
 }
 
 const circle = 'rounded-full! border border-fg bg-surface'
@@ -210,12 +280,21 @@ export function AppLayout() {
   const { session, profile, signOut } = useAuth()
   const items = navFor(profile?.intent, !!profile?.is_admin)
   const mobile = mobileFor(profile?.intent)
-  const unread = useUnread(session?.user.id)
+  const { n: unread, fresh, clear } = useUnread(session?.user.id)
+  useEffect(() => {
+    const base = 'RePair - Find Your Solver'
+    document.title = unread > 0 ? `(${unread}) ${base}` : base
+    return () => {
+      document.title = base
+    }
+  }, [unread])
   const nav = useNavigate()
 
   const bell = (
     <div className="relative">
-      <IconButton icon={Bell} label="Notifications" className={circle} onClick={() => nav('/app/notifications')} />
+      <span className={fresh ? 'inline-flex animate-[ring_0.9s_ease-in-out_3]' : 'inline-flex'}>
+        <IconButton icon={Bell} label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'} className={circle} onClick={() => nav('/app/notifications')} />
+      </span>
       {unread > 0 && (
         <span className="pointer-events-none absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-black">
           {unread > 9 ? '9+' : unread}
@@ -306,7 +385,8 @@ export function AppLayout() {
           </NavLink>
         ))}
       </nav>
-      <Assistant />
+      <NotificationPopup fresh={fresh} onClose={clear} />
+      <Assistant raised />
     </div>
   )
 }

@@ -32,7 +32,7 @@ const ENTRIES: Entry[] = [
   {
     when: ['i can help', 'become a helper', 'offer help', 'my profile', 'create a profile', 'how do i help', 'helper profile', 'solver', 'volunteer', 'offer my'],
     answer:
-      'Open “My profile” and tell Pip what you can offer in one message, for example “I am a grandmother who tells bedtime stories”. Pip makes your profile, matches you with people who are waiting, and tells them. You can also open Explore, pick a problem you can help with, and say hello.',
+      'Open “Profile” and tell Pip what you can offer in one message, for example “I am a grandmother who tells bedtime stories”. Pip makes your profile, matches you with people who are waiting, and tells them. You can also open Explore, pick a problem you can help with, and say hello.',
     next: ['What is Explore?', 'How do requests work?'],
   },
   {

@@ -68,7 +68,7 @@ function Chat({ conn }: { conn: ConnectionView }) {
         <Link to="/app/messages" className="md:hidden" aria-label="Back to messages">
           <ArrowLeft aria-hidden />
         </Link>
-        <Avatar name={conn.other?.display_name ?? '?'} size={36} />
+        <Avatar name={conn.other?.display_name ?? '?'} src={conn.other?.avatar_url} size={36} />
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold">{conn.other?.display_name}</p>
           <Link to={`/app/cases/${conn.case_id}`} className="block truncate text-xs text-primary">
@@ -168,7 +168,7 @@ export default function Messages() {
                   to={`/app/messages/${c.id}`}
                   className={`flex min-h-16 items-center gap-3 rounded-2xl border p-3 ${c.id === connId ? 'border-primary bg-accent-soft' : 'border-line bg-surface hover:bg-surface-2'}`}
                 >
-                  <Avatar name={c.other?.display_name ?? '?'} />
+                  <Avatar name={c.other?.display_name ?? '?'} src={c.other?.avatar_url} />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{c.other?.display_name}</p>
                     <p className="truncate text-xs text-muted">{c.case?.title}</p>

@@ -64,6 +64,25 @@ If the helper account already has a profile, "My profile" shows it. You can over
 **7. Admin** (third window, `pesthanseeh929`)
 - Admin overview shows what needs attention (reports, verifications, **problems with no match yet**), then the numbers. Open "Waiting" to show unmatched problems.
 
+
+## Bonus scene: one problem, many solvers (the coconut pluckers)
+
+Run `supabase/demo_coconut.sql` once (after explore.sql). It adds seven coconut pluckers with South Indian names and one demo problem.
+
+1. Signed in as the **parent/seeker**, open **Ask Pip** (or use the landing page card) and say or type, as a person would:
+   *I have 127 coconut trees and I need someone to pluck the coconuts.*
+2. About seven people match. Swipe cards show each person's **price, speed and style, read from their own words**, and an **estimate for your 127 trees**:
+   - Rajan Nair: ₹7 per tree, about 35 trees a day, estimate about ₹889, around 4 days (cheapest)
+   - Karthikeyan Raja: ₹8 per tree, climbing machine, about ₹1,016, around 2 days
+   - Murugan Pillai: team of three, ₹9 per tree, 150 trees a day, about ₹1,143, **1 day** (fastest)
+   - Suresh Warrier: careful, cleans the crown, ₹11 per tree, about ₹1,397, around 5 days (best quality)
+3. Scroll to **Compare everyone**. Use **Sort: Lowest price** or **Fastest**, search *machine*, filter *Available now*, open *Read their profile*, then **Choose** (tap twice to confirm).
+4. Say: "One problem, many solvers. The seeker decides what matters: cheapest, fastest, or most careful."
+
+## Photos
+
+Run `supabase/media.sql` once. As the grandmother (`junaidcmdd`), open **Profile** and press **Add photo**; add a few pictures under **Show your work**. As the parent, tell Pip a problem: the grandmother now appears on the swipe card with her **photo large at the top**, like a dating app. Parents can also press **Add a photo, video or document** when describing a problem (for example, a picture of the broken chain).
+
 ## If something goes wrong
 
 - **"Nothing happens after Find my match":** check your internet and try again. The problem is only saved once the screen moves on.
